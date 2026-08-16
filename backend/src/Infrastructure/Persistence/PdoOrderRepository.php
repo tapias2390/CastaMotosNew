@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence;
 
+use App\Application\Support\OrderStatusTransitions;
 use App\Domain\Repositories\OrderRepositoryInterface;
+use App\Exceptions\NotFoundException;
 use App\Exceptions\ValidationException;
 use PDO;
 
@@ -113,6 +115,19 @@ final class PdoOrderRepository implements OrderRepositoryInterface
                 "INSERT INTO inventory_movements (product_id, type, quantity, reason, reference_type, reference_id, created_by_user_id)
                  VALUES (:product_id, 'out', :quantity, :reason, 'order', :order_id, :user_id)"
             );
+            // Reserva real (sección 25): se libera/restituye en updateStatus() cuando el
+            // pedido llega a un estado terminal (ver OrderStatusTransitions). El "ON
+            // DUPLICATE KEY" es un respaldo defensivo por si el producto no tuviera fila
+            // en inventory todavía (siempre debería tenerla desde su creación).
+            $reserveStmt = $this->connection->prepare(
+                'INSERT INTO inventory (product_id, stock_current, stock_reserved, stock_minimum)
+                 VALUES (:product_id, 0, :quantity, 0)
+                 ON DUPLICATE KEY UPDATE stock_reserved = stock_reserved + VALUES(stock_reserved)'
+            );
+            $reservationMovementStmt = $this->connection->prepare(
+                "INSERT INTO inventory_movements (product_id, type, quantity, reason, reference_type, reference_id, created_by_user_id)
+                 VALUES (:product_id, 'reservation', :quantity, :reason, 'order', :order_id, :user_id)"
+            );
 
             foreach ($order['items'] as $item) {
                 $itemStmt->execute([
@@ -132,6 +147,14 @@ final class PdoOrderRepository implements OrderRepositoryInterface
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'reason' => "Venta — pedido {$order['order_number']}",
+                        'order_id' => $orderId,
+                        'user_id' => $order['user_id'],
+                    ]);
+                    $reserveStmt->execute(['product_id' => $item['product_id'], 'quantity' => $item['quantity']]);
+                    $reservationMovementStmt->execute([
+                        'product_id' => $item['product_id'],
+                        'quantity' => $item['quantity'],
+                        'reason' => "Reserva — pedido {$order['order_number']}",
                         'order_id' => $orderId,
                         'user_id' => $order['user_id'],
                     ]);
@@ -166,6 +189,182 @@ final class PdoOrderRepository implements OrderRepositoryInterface
         } catch (\Throwable $e) {
             $this->connection->rollBack();
             throw $e;
+        }
+    }
+
+    public function paginateForAdmin(array $filters): array
+    {
+        $conditions = ['o.deleted_at IS NULL'];
+        $params = [];
+
+        if (!empty($filters['status'])) {
+            $conditions[] = 'o.status = :status';
+            $params['status'] = $filters['status'];
+        }
+
+        $where = 'WHERE ' . implode(' AND ', $conditions);
+
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $perPage = min(100, max(1, (int) ($filters['per_page'] ?? 20)));
+        $offset = ($page - 1) * $perPage;
+
+        $countStmt = $this->connection->prepare("SELECT COUNT(*) FROM orders o {$where}");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        $sql = "SELECT o.id, o.order_number, o.status, o.total, o.delivery_method, o.created_at,
+                    u.name AS customer_name, u.last_name AS customer_last_name, u.email AS customer_email
+                FROM orders o
+                INNER JOIN users u ON u.id = o.user_id
+                {$where}
+                ORDER BY o.created_at DESC
+                LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->connection->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return ['data' => $stmt->fetchAll(), 'total' => $total, 'page' => $page, 'per_page' => $perPage];
+    }
+
+    public function findByOrderNumberForAdmin(string $orderNumber): ?array
+    {
+        $stmt = $this->connection->prepare(
+            'SELECT o.*, u.name AS customer_name, u.last_name AS customer_last_name, u.email AS customer_email
+             FROM orders o
+             INNER JOIN users u ON u.id = o.user_id
+             WHERE o.order_number = :number AND o.deleted_at IS NULL'
+        );
+        $stmt->execute(['number' => $orderNumber]);
+        $order = $stmt->fetch();
+
+        if ($order === false) {
+            return null;
+        }
+
+        $items = $this->connection->prepare('SELECT * FROM order_items WHERE order_id = :order_id');
+        $items->execute(['order_id' => $order['id']]);
+        $order['items'] = $items->fetchAll();
+
+        $history = $this->connection->prepare(
+            'SELECT status, comment, created_at FROM order_status_history WHERE order_id = :order_id ORDER BY id ASC'
+        );
+        $history->execute(['order_id' => $order['id']]);
+        $order['status_history'] = $history->fetchAll();
+
+        $payments = $this->connection->prepare('SELECT * FROM payments WHERE order_id = :order_id');
+        $payments->execute(['order_id' => $order['id']]);
+        $order['payments'] = $payments->fetchAll();
+
+        return $order;
+    }
+
+    public function findStatusById(int $orderId): ?string
+    {
+        $stmt = $this->connection->prepare('SELECT status FROM orders WHERE id = :id AND deleted_at IS NULL');
+        $stmt->execute(['id' => $orderId]);
+        $status = $stmt->fetchColumn();
+
+        return $status !== false ? $status : null;
+    }
+
+    public function updateStatus(int $orderId, string $newStatus, ?string $comment, int $changedByUserId): void
+    {
+        $this->connection->beginTransaction();
+
+        try {
+            // Re-verificación autoritativa dentro de la transacción (mismo criterio que
+            // createFromCheckout): el estado pudo cambiar entre que el UseCase lo validó
+            // y que esta llamada realmente se ejecuta.
+            $lock = $this->connection->prepare('SELECT status FROM orders WHERE id = :id AND deleted_at IS NULL FOR UPDATE');
+            $lock->execute(['id' => $orderId]);
+            $currentStatus = $lock->fetchColumn();
+
+            if ($currentStatus === false) {
+                throw new NotFoundException('Pedido no encontrado.');
+            }
+
+            if (!OrderStatusTransitions::isAllowed((string) $currentStatus, $newStatus)) {
+                throw new ValidationException('No fue posible cambiar el estado del pedido.', [
+                    'status' => ["No se puede pasar de \"{$currentStatus}\" a \"{$newStatus}\"."],
+                ]);
+            }
+
+            $this->connection->prepare('UPDATE orders SET status = :status WHERE id = :id')
+                ->execute(['status' => $newStatus, 'id' => $orderId]);
+
+            $this->connection->prepare(
+                'INSERT INTO order_status_history (order_id, status, comment, changed_by_user_id)
+                 VALUES (:order_id, :status, :comment, :user_id)'
+            )->execute([
+                'order_id' => $orderId,
+                'status' => $newStatus,
+                'comment' => $comment,
+                'user_id' => $changedByUserId,
+            ]);
+
+            if (OrderStatusTransitions::isTerminal($newStatus)) {
+                $this->releaseReservation($orderId, $newStatus, $changedByUserId);
+            }
+
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            $this->connection->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Libera la reserva de stock del pedido (sección 25) y, si la venta no se
+     * concretó (CANCELADO/DEVUELTO), restituye products.stock. Se llama desde
+     * dentro de la transacción de updateStatus(), nunca de forma independiente.
+     */
+    private function releaseReservation(int $orderId, string $newStatus, int $userId): void
+    {
+        $items = $this->connection->prepare(
+            'SELECT product_id, quantity, name_snapshot FROM order_items WHERE order_id = :order_id AND product_id IS NOT NULL'
+        );
+        $items->execute(['order_id' => $orderId]);
+
+        $release = $this->connection->prepare(
+            'UPDATE inventory SET stock_reserved = GREATEST(0, stock_reserved - :quantity) WHERE product_id = :product_id'
+        );
+        $releaseMovement = $this->connection->prepare(
+            "INSERT INTO inventory_movements (product_id, type, quantity, reason, reference_type, reference_id, created_by_user_id)
+             VALUES (:product_id, 'release', :quantity, :reason, 'order', :order_id, :user_id)"
+        );
+        $restore = $this->connection->prepare('UPDATE products SET stock = stock + :quantity WHERE id = :id');
+        $restoreMovement = $this->connection->prepare(
+            "INSERT INTO inventory_movements (product_id, type, quantity, reason, reference_type, reference_id, created_by_user_id)
+             VALUES (:product_id, 'in', :quantity, :reason, 'order', :order_id, :user_id)"
+        );
+
+        $restores = OrderStatusTransitions::restoresStock($newStatus);
+
+        foreach ($items->fetchAll() as $item) {
+            $release->execute(['quantity' => $item['quantity'], 'product_id' => $item['product_id']]);
+            $releaseMovement->execute([
+                'product_id' => $item['product_id'],
+                'quantity' => $item['quantity'],
+                'reason' => "Liberación de reserva — pedido pasó a {$newStatus}",
+                'order_id' => $orderId,
+                'user_id' => $userId,
+            ]);
+
+            if ($restores) {
+                $restore->execute(['quantity' => $item['quantity'], 'id' => $item['product_id']]);
+                $restoreMovement->execute([
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'reason' => "Stock restituido — pedido pasó a {$newStatus}",
+                    'order_id' => $orderId,
+                    'user_id' => $userId,
+                ]);
+            }
         }
     }
 }

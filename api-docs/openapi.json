@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "CASTAMOTO API",
-    "description": "API REST de la plataforma e-commerce y marketplace de motocicletas CASTAMOTO. Cubre las Fases 1-5 (arquitectura, autenticación, catálogo, búsqueda/favoritos, carrito/checkout).",
-    "version": "1.0.0"
+    "description": "API REST de la plataforma e-commerce y marketplace de motocicletas CASTAMOTO. Cubre las Fases 1-6 (arquitectura, autenticación, catálogo, búsqueda/favoritos, carrito/checkout, pedidos/inventario).",
+    "version": "1.1.0"
   },
   "servers": [
     { "url": "/api", "description": "Mismo origen que el frontend" }
@@ -21,6 +21,8 @@
     { "name": "Favoritos" },
     { "name": "Carrito" },
     { "name": "Checkout y pedidos" },
+    { "name": "Administración de pedidos" },
+    { "name": "Administración de inventario" },
     { "name": "Métodos de pago" },
     { "name": "Archivos" }
   ],
@@ -294,6 +296,50 @@
           "total": { "type": "integer" },
           "page": { "type": "integer" },
           "per_page": { "type": "integer" }
+        }
+      },
+      "AdminOrderSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "order_number": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["PENDIENTE", "CONFIRMADO", "PAGO_PENDIENTE", "PAGO_CONFIRMADO", "PREPARANDO", "EN_CAMINO", "ENTREGADO", "CANCELADO", "DEVUELTO"]
+          },
+          "total": { "type": "number" },
+          "delivery_method": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "customer_name": { "type": "string" },
+          "customer_last_name": { "type": "string" },
+          "customer_email": { "type": "string" }
+        }
+      },
+      "InventoryItem": {
+        "type": "object",
+        "properties": {
+          "product_id": { "type": "integer" },
+          "name": { "type": "string" },
+          "sku": { "type": "string" },
+          "category_name": { "type": "string", "nullable": true },
+          "stock_current": { "type": "integer" },
+          "stock_reserved": { "type": "integer" },
+          "stock_available": { "type": "integer" },
+          "min_stock": { "type": "integer" }
+        }
+      },
+      "InventoryMovement": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "product_id": { "type": "integer" },
+          "product_name": { "type": "string" },
+          "type": { "type": "string", "enum": ["in", "out", "adjustment", "reservation", "release"] },
+          "quantity": { "type": "integer", "description": "Con signo para \"adjustment\"; magnitud positiva para el resto." },
+          "reason": { "type": "string", "nullable": true },
+          "reference_type": { "type": "string", "nullable": true },
+          "reference_id": { "type": "integer", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" }
         }
       }
     },
@@ -766,6 +812,109 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Order" } } } } } },
           "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/orders": {
+      "get": {
+        "tags": ["Administración de pedidos"], "summary": "Listar pedidos (manage-orders)", "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": {
+            "type": "string",
+            "enum": ["PENDIENTE", "CONFIRMADO", "PAGO_PENDIENTE", "PAGO_CONFIRMADO", "PREPARANDO", "EN_CAMINO", "ENTREGADO", "CANCELADO", "DEVUELTO"]
+          } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Pagination" }, { "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminOrderSummary" } } } } ] } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/orders/{orderNumber}": {
+      "get": {
+        "tags": ["Administración de pedidos"], "summary": "Detalle de cualquier pedido (manage-orders)", "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "orderNumber", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Order" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/admin/orders/{orderNumber}/status": {
+      "put": {
+        "tags": ["Administración de pedidos"],
+        "summary": "Cambiar estado del pedido (manage-orders)",
+        "description": "Valida la transición contra la máquina de estados de la sección 22. Al llegar a un estado terminal libera la reserva de stock (y la restituye si es CANCELADO/DEVUELTO).",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "orderNumber", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["status"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["PENDIENTE", "CONFIRMADO", "PAGO_PENDIENTE", "PAGO_CONFIRMADO", "PREPARANDO", "EN_CAMINO", "ENTREGADO", "CANCELADO", "DEVUELTO"]
+            },
+            "comment": { "type": "string" }
+          }
+        } } } },
+        "responses": {
+          "200": { "description": "Actualizado", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Order" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "description": "Transición inválida o estado inexistente.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/admin/inventory": {
+      "get": {
+        "tags": ["Administración de inventario"], "summary": "Stock/reservado/disponible por producto (manage-inventory)", "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "low_stock", "in": "query", "description": "1 = solo productos con stock <= min_stock", "schema": { "type": "boolean" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Pagination" }, { "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/InventoryItem" } } } } ] } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/admin/inventory/{productId}/adjust": {
+      "post": {
+        "tags": ["Administración de inventario"],
+        "summary": "Ajuste manual de stock (manage-inventory)",
+        "description": "\"in\"/\"out\" son magnitudes positivas; \"adjustment\" es un delta con signo (puede ser negativo). Siempre requiere \"reason\" para auditoría.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["type", "quantity", "reason"],
+          "properties": {
+            "type": { "type": "string", "enum": ["in", "out", "adjustment"] },
+            "quantity": { "type": "integer" },
+            "reason": { "type": "string" }
+          }
+        } } } },
+        "responses": {
+          "200": { "description": "Actualizado" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "description": "Dejaría stock negativo o datos inválidos.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/admin/inventory/movements": {
+      "get": {
+        "tags": ["Administración de inventario"], "summary": "Historial de movimientos de inventario (manage-inventory)", "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "product_id", "in": "query", "schema": { "type": "integer" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "allOf": [{ "$ref": "#/components/schemas/Pagination" }, { "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/InventoryMovement" } } } } ] } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
         }
       }
     },

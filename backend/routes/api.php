@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Infrastructure\Http\Router;
 use App\Presentation\Controllers\AddressController;
+use App\Presentation\Controllers\AdminInventoryController;
+use App\Presentation\Controllers\AdminOrderController;
 use App\Presentation\Controllers\AuthController;
 use App\Presentation\Controllers\BrandController;
 use App\Presentation\Controllers\CartController;
@@ -111,6 +113,15 @@ $router->get('api/payment-methods', [PaymentMethodController::class, 'index']);
 // --- Checkout y pedidos (Fase 5 / sección 19) ---
 $router->post('api/checkout', [CheckoutController::class, 'store'], [new AuthMiddleware()]);
 $router->get('api/orders/{orderNumber}', [CheckoutController::class, 'show'], [new AuthMiddleware()]);
+
+// --- Administración de pedidos e inventario (Fase 6 / secciones 22, 25) ---
+$router->get('api/admin/orders', [AdminOrderController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
+$router->get('api/admin/orders/{orderNumber}', [AdminOrderController::class, 'show'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
+$router->put('api/admin/orders/{orderNumber}/status', [AdminOrderController::class, 'updateStatus'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
+
+$router->get('api/admin/inventory', [AdminInventoryController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);
+$router->get('api/admin/inventory/movements', [AdminInventoryController::class, 'movements'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);
+$router->post('api/admin/inventory/{productId}/adjust', [AdminInventoryController::class, 'adjust'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);
 
 // --- Archivos servidos (avatares, imágenes de catálogo) ---
 $router->get('api/media/avatars/{filename}', [MediaController::class, 'avatar']);

@@ -20,4 +20,5 @@ Options -Indexes
     RewriteRule ^servicios/?$ frontend/pages/servicios.html [L,QSA]
     RewriteRule ^carrito/?$ frontend/pages/carrito.html [L,QSA]
     RewriteRule ^checkout/?$ frontend/pages/checkout.html [L,QSA]
+    RewriteRule ^admin/?$ frontend/pages/admin.html [L,QSA]
 </IfModule>

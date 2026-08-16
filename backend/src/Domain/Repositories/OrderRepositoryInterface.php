@@ -16,8 +16,8 @@ interface OrderRepositoryInterface
     /**
      * Ejecuta la transacción completa del checkout: vuelve a bloquear y
      * verificar el stock real (SELECT ... FOR UPDATE) justo antes de
-     * descontarlo, crea el pedido + ítems + historial + pago inicial, y deja
-     * el carrito vacío — todo o nada (sección 35).
+     * descontarlo, crea el pedido + ítems + historial + pago inicial, reserva
+     * stock (sección 25) y deja el carrito vacío — todo o nada (sección 35).
      *
      * @throws \App\Exceptions\ValidationException si algún producto ya no
      *         tiene stock suficiente en el momento de confirmar.
@@ -25,4 +25,25 @@ interface OrderRepositoryInterface
      * @return array{id:int, order_number:string}
      */
     public function createFromCheckout(array $order): array;
+
+    /**
+     * @return array{data: array, total: int, page: int, per_page: int}
+     */
+    public function paginateForAdmin(array $filters): array;
+
+    /**
+     * Igual que findByOrderNumberForUser() pero sin filtrar por dueño (uso
+     * administrativo, protegido por permiso manage-orders en el controller).
+     */
+    public function findByOrderNumberForAdmin(string $orderNumber): ?array;
+
+    public function findStatusById(int $orderId): ?string;
+
+    /**
+     * Cambia el estado del pedido dentro de una transacción: inserta en
+     * order_status_history y, si el nuevo estado es terminal, libera la
+     * reserva de stock (y la restituye a products.stock si la venta no se
+     * concretó — CANCELADO/DEVUELTO). Ver OrderStatusTransitions.
+     */
+    public function updateStatus(int $orderId, string $newStatus, ?string $comment, int $changedByUserId): void;
 }

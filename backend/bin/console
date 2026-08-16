@@ -8,10 +8,12 @@ declare(strict_types=1);
  *   php bin/console migrate            Ejecuta las migraciones pendientes.
  *   php bin/console migrate:rollback   Revierte el último batch de migraciones.
  *   php bin/console db:seed            Ejecuta los seeders (datos iniciales).
+ *   php bin/console demo:seed          Carga productos/servicios de MUESTRA para visualizar el frontend.
  */
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+use App\Database\DemoDataSeeder;
 use App\Infrastructure\Config\Config;
 use App\Infrastructure\Database\Connection;
 use App\Infrastructure\Database\Migrator;
@@ -82,6 +84,11 @@ try {
             console_line('Seeders ejecutados correctamente.');
             break;
 
+        case 'demo:seed':
+            (new DemoDataSeeder(Connection::get(), $basePath))->run();
+            console_line('Datos de muestra cargados (productos y servicios con imágenes de marcador de posición).');
+            break;
+
         default:
             console_error('Comando no reconocido: ' . ($command ?? '(ninguno)'));
             console_line('');
@@ -89,6 +96,7 @@ try {
             console_line('  migrate             Ejecuta las migraciones pendientes.');
             console_line('  migrate:rollback    Revierte el último batch de migraciones.');
             console_line('  db:seed             Ejecuta los seeders (datos iniciales).');
+            console_line('  demo:seed           Carga productos/servicios de muestra para visualizar el frontend.');
             exit(1);
     }
 } catch (Throwable $e) {

@@ -22,6 +22,12 @@ final class MediaController
         'jpeg' => 'image/jpeg',
         'png' => 'image/png',
         'webp' => 'image/webp',
+        // .svg solo lo generan scripts del propio servidor (ej. DemoDataSeeder) para
+        // imágenes de marcador de posición; UploadedFileValidator NUNCA permite subir
+        // SVG por HTTP (riesgo de XSS), así que ningún avatar/imagen de usuario puede
+        // llegar a ser .svg — se sirve siempre vía <img src>, que no ejecuta scripts
+        // embebidos en el SVG (a diferencia de <object>/<iframe>).
+        'svg' => 'image/svg+xml',
     ];
 
     public function avatar(Request $request, string $filename): void
@@ -41,7 +47,7 @@ final class MediaController
 
     private function serveFrom(string $subdirectory, string $filename): void
     {
-        if (!preg_match('/^[a-f0-9]{32}\.(jpg|jpeg|png|webp)$/i', $filename)) {
+        if (!preg_match('/^[a-f0-9]{32}\.(jpg|jpeg|png|webp|svg)$/i', $filename)) {
             throw new NotFoundException('Archivo no encontrado.');
         }
 

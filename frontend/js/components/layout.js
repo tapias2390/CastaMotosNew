@@ -3,6 +3,14 @@
  * Se monta en TODAS las páginas sobre <div id="app-header"> / <div id="app-footer">
  * (sección 40: componentes reutilizables — Header, Navbar, Buscador, Modal).
  */
+/**
+ * Solo controla si se MUESTRA el link "Admin" (mejor UX) — no es la
+ * seguridad real, que vive en el backend (AuthMiddleware + RequirePermissionMiddleware).
+ */
+function isAdminUser(user) {
+  return !!user && Array.isArray(user.roles) && user.roles.some((role) => ['administrador', 'superadministrador'].includes(role));
+}
+
 function renderHeaderShell() {
   const mount = document.getElementById('app-header');
   if (!mount) return;
@@ -27,6 +35,7 @@ function renderHeaderShell() {
           <a class="icon-btn" href="carrito" aria-label="Carrito">
             🛒<span class="badge-count" id="cart-badge" hidden>0</span>
           </a>
+          ${isAdminUser(user) ? '<a class="icon-btn" href="admin">Admin</a>' : ''}
           ${user
             ? `<span style="font-size:0.85rem;color:var(--gris-texto);">Hola, <strong style="color:var(--blanco)">${helpers.escapeHtml(user.name)}</strong></span>
                <button class="icon-btn" id="logout-btn">Salir</button>`

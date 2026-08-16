@@ -1,6 +1,6 @@
 # CASTAMOTO
 
-Plataforma e-commerce y marketplace de motocicletas. Backend: Fases 1-5 completas (arquitectura, auth/roles, catálogo, búsqueda/favoritos, carrito/checkout). Además del backend, ya existe un **frontend funcional real** (Home + productos + servicios + carrito + checkout + login/registro) y documentación **Swagger/OpenAPI** interactiva — el prompt maestro no les asigna un número de fase propio (sección 55 solo numera hitos de backend), así que se construyeron en paralelo para que la plataforma sea usable de punta a punta, no solo una colección de endpoints. Se irá ampliando en cada fase siguiente (ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y el documento de especificación `Prompt maestro — Plataforma e-commerce CASTAMOTO...md`).
+Plataforma e-commerce y marketplace de motocicletas. Backend: Fases 1-6 completas (arquitectura, auth/roles, catálogo, búsqueda/favoritos, carrito/checkout, pedidos/inventario). Además del backend, ya existe un **frontend funcional real** (Home + productos + servicios + carrito + checkout + login/registro + panel administrativo básico) y documentación **Swagger/OpenAPI** interactiva — el prompt maestro no les asigna un número de fase propio (sección 55 solo numera hitos de backend), así que se construyeron en paralelo para que la plataforma sea usable de punta a punta, no solo una colección de endpoints. Se irá ampliando en cada fase siguiente (ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y el documento de especificación `Prompt maestro — Plataforma e-commerce CASTAMOTO...md`).
 
 ## Requisitos
 
@@ -35,6 +35,7 @@ No es necesario crear la base de datos manualmente: al ejecutar las migraciones,
 cd backend
 php bin/console migrate       # crea todas las tablas
 php bin/console db:seed       # carga roles, permisos, métodos de pago, admin inicial, categorías y marcas
+php bin/console demo:seed     # opcional: productos y servicios de MUESTRA para ver el frontend con datos reales
 ```
 
 Para revertir el último lote de migraciones:
@@ -42,6 +43,8 @@ Para revertir el último lote de migraciones:
 ```bash
 php bin/console migrate:rollback
 ```
+
+`demo:seed` (`backend/database/DemoDataSeeder.php`) es distinto de `db:seed`: carga 15 productos y 5 servicios de ejemplo (con imágenes de marcador de posición generadas en SVG, ya que este entorno no tiene la extensión GD) repartidos en las categorías/marcas reales. Es contenido de demostración, no datos de sistema — por eso vive fuera de `/database/seeders` y es un comando aparte. Es seguro correrlo varias veces (no duplica por `sku`/`name`).
 
 El usuario administrador inicial se crea con el correo/clave definidos en `.env` (`ADMIN_EMAIL` / `ADMIN_PASSWORD`). **Cambiar esta contraseña antes de cualquier entorno que no sea local.**
 
@@ -65,6 +68,7 @@ Con Apache y MySQL corriendo desde el panel de control de XAMPP, y el proyecto u
 | `/carrito` | Carrito (funciona sin sesión, vía `X-Cart-Token`) |
 | `/checkout` | Dirección → método de entrega → método de pago → confirmar |
 | `/pedido/{numero}` | Confirmación del pedido creado |
+| `/admin` | Panel básico (Fase 6): pedidos (cambiar estado) e inventario (ver stock/reservado/disponible, ajustar). Solo visible/accesible con permiso `manage-orders`/`manage-inventory`. |
 
 Login/registro están en un modal accesible desde el botón del header en cualquier página (`frontend/js/components/layout.js`). Es HTML/CSS/JS plano sin build step (sección 39: "librerías JS solo cuando aporten valor real"); todas las rutas amigables se resuelven en el `.htaccess` de la raíz hacia los archivos estáticos de `frontend/pages/`.
 
@@ -139,14 +143,20 @@ Las rutas marcadas con 🔒 requieren `Authorization: Bearer <token>` (JWT obten
 | POST 🔒 | `/api/checkout` | `{ address_id, payment_method_id, delivery_method, notes? }` → crea el pedido. |
 | GET 🔒 | `/api/orders/{orderNumber}` | Confirmación/detalle del pedido (solo el dueño; 404 si no es suyo). |
 | GET | `/api/payment-methods` | Métodos de pago habilitados (para que el checkout sepa qué mostrar). |
+| GET 🔒 | `/api/admin/orders` | Listar pedidos (`manage-orders`), filtro `status`. |
+| GET 🔒 | `/api/admin/orders/{orderNumber}` | Detalle de cualquier pedido (`manage-orders`). |
+| PUT 🔒 | `/api/admin/orders/{orderNumber}/status` | Cambiar estado `{ status, comment? }` (`manage-orders`), valida la transición. |
+| GET 🔒 | `/api/admin/inventory` | Stock/reservado/disponible por producto (`manage-inventory`), filtros `search`, `low_stock`. |
+| POST 🔒 | `/api/admin/inventory/{productId}/adjust` | Ajuste manual `{ type: in\|out\|adjustment, quantity, reason }` (`manage-inventory`). |
+| GET 🔒 | `/api/admin/inventory/movements` | Historial de movimientos, filtro `product_id` opcional (`manage-inventory`). |
 
-`stock_status` se calcula en cada respuesta: `agotado` (stock ≤ 0), `ultimas_unidades` (stock ≤ `min_stock`) o `disponible`. `sort` en productos/servicios acepta `relevancia` (por defecto cuando hay `search`, usa `FULLTEXT`/`MATCH...AGAINST`), `price_asc`, `price_desc`, `name`, `rating` y `best_selling` (este último cae a "más recientes" hasta que exista el módulo de pedidos en la Fase 6).
+`stock_status` se calcula en cada respuesta: `agotado` (stock ≤ 0), `ultimas_unidades` (stock ≤ `min_stock`) o `disponible`. `sort` en productos/servicios acepta `relevancia` (por defecto cuando hay `search`, usa `FULLTEXT`/`MATCH...AGAINST`), `price_asc`, `price_desc`, `name`, `rating` y `best_selling` (este último sigue cayendo a "más recientes": la Fase 6 conecta inventario/reservas, no un contador de ventas).
 
 **Carrito de invitado**: el primer `GET`/`POST` sin `X-Cart-Token` devuelve uno nuevo (`cart_token` en la respuesta) — guárdalo (ej. localStorage) y envíalo en las siguientes peticiones. Si el usuario hace login con ese header presente, el carrito de invitado se fusiona automáticamente al carrito de su cuenta.
 
-`delivery_method` acepta `domicilio` (tarifa plana `SHIPPING_FLAT_RATE`, gratis sobre `SHIPPING_FREE_THRESHOLD`) o `recogida_tienda` (envío siempre `0`). El pedido nace en estado `PENDIENTE` con un pago inicial en `payments` con estado `pending`; la gestión completa de estados del pedido (confirmar pago, preparar, enviar, entregar) es la Fase 6.
+`delivery_method` acepta `domicilio` (tarifa plana `SHIPPING_FLAT_RATE`, gratis sobre `SHIPPING_FREE_THRESHOLD`) o `recogida_tienda` (envío siempre `0`). El pedido nace en estado `PENDIENTE` con un pago inicial en `payments` con estado `pending`.
 
-Los endpoints de inventario/gestión de pedidos se agregan en la Fase 6.
+**Ciclo de vida del pedido (Fase 6)**: `PUT /api/admin/orders/{orderNumber}/status` valida la transición contra la máquina de estados de la sección 22 (`Application/Support/OrderStatusTransitions.php`) — solo se puede avanzar por los caminos válidos, nunca saltar estados ni salir de uno terminal (`CANCELADO`/`DEVUELTO`/`ENTREGADO`). Al crear el pedido se reserva stock de verdad (`inventory.stock_reserved`, sección 25); al llegar a un estado terminal la reserva se libera, y si la venta no se concretó (`CANCELADO`/`DEVUELTO`) `products.stock` se restituye — todo registrado en `inventory_movements` para auditoría.
 
 ## Swagger / OpenAPI
 
@@ -161,7 +171,7 @@ cd backend
 vendor/bin/phpunit
 ```
 
-Incluye una prueba de humo (`tests/ArchitectureSmokeTest.php`), pruebas unitarias de `Validator`, `JwtService`, `SlugGenerator`, `DidYouMeanFinder`, `CartPricingCalculator` y `OrderNumberGenerator`, y una prueba de integración (`AuthFlowIntegrationTest.php`) que ejercita registro → login contra la base de datos local (crea y limpia su propio usuario de prueba).
+Incluye una prueba de humo (`tests/ArchitectureSmokeTest.php`), pruebas unitarias de `Validator`, `JwtService`, `SlugGenerator`, `DidYouMeanFinder`, `CartPricingCalculator`, `OrderNumberGenerator` y `OrderStatusTransitions`, y una prueba de integración (`AuthFlowIntegrationTest.php`) que ejercita registro → login contra la base de datos local (crea y limpia su propio usuario de prueba).
 
 ## Producción
 
@@ -198,14 +208,15 @@ Antes de desplegar a producción:
   /routes        Registro de rutas (routes/api.php)
   /src
     /Domain            Entidades (User) y contratos de repositorio (puertos)
-    /Application       Casos de uso (Auth, Profile, Address, Catalog, Search, Favorite, Cart, Checkout), Validator, SlugGenerator, DidYouMeanFinder, CartPricingCalculator, OrderNumberGenerator, subida de archivos
+    /Application       Casos de uso (Auth, Profile, Address, Catalog, Search, Favorite, Cart, Checkout, Orders), Validator, SlugGenerator, DidYouMeanFinder, CartPricingCalculator, OrderNumberGenerator, OrderStatusTransitions, subida de archivos
     /Infrastructure    Config, base de datos, HTTP, logging, Auth (JWT), Mail, Persistence (adaptadores PDO)
     /Presentation      Controllers y middleware (Auth, OptionalAuth, RequirePermission, Cors)
     /Exceptions        Excepciones de la aplicación
   /database
-    /migrations  Una tabla (o alteración) por archivo
-    /seeders     Datos iniciales (roles, permisos, admin, categorías, marcas)
-  /bin/console   CLI: migrate | migrate:rollback | db:seed
+    /migrations       Una tabla (o alteración) por archivo
+    /seeders          Datos iniciales (roles, permisos, admin, categorías, marcas)
+    DemoDataSeeder.php  Datos de MUESTRA opcionales (php bin/console demo:seed), no de sistema
+  /bin/console   CLI: migrate | migrate:rollback | db:seed | demo:seed
   /storage
     /logs        Logs de la aplicación
     /mails       Correos simulados en desarrollo local (driver "log")
@@ -216,11 +227,11 @@ Antes de desplegar a producción:
   /assets/img    Logo y estáticos
   /css/main.css  Sistema de diseño (negro/amarillo, responsive)
   /js
-    /services    apiService (fetch + JWT + X-Cart-Token), authService, catalogService, cartService
+    /services    apiService (fetch + JWT + X-Cart-Token), authService, catalogService, cartService, adminService
     /components  layout (header/nav/modal login/footer), cards (ProductCard/ServiceCard)
     /utils       helpers (moneda, query params, toasts)
-    /pages       un script por página (home, productos, producto, servicios, servicio, carrito, checkout, pedido)
-  /pages         productos.html, producto.html, servicios.html, servicio.html, carrito.html, checkout.html, pedido.html
+    /pages       un script por página (home, productos, producto, servicios, servicio, carrito, checkout, pedido, admin)
+  /pages         productos.html, producto.html, servicios.html, servicio.html, carrito.html, checkout.html, pedido.html, admin.html
 
 /api-docs        Swagger UI + openapi.json (estático, fuera del prefijo /api/)
 
@@ -229,9 +240,10 @@ Antes de desplegar a producción:
 
 ## Próximas fases
 
-Fase 6: pedidos + inventario (estados del pedido, reservas reales en `inventory`) · Fase 7: métodos de pago configurables (pasarelas reales) · Fase 8: correos + notificaciones · Fase 9: dashboard administrador · Fase 10: dashboard vendedor (incluye gestión de tiendas y restricción "solo mis productos") · Fase 11: IA · Fase 12: testing + seguridad + optimización.
+Fase 7: métodos de pago configurables (pasarelas reales) · Fase 8: correos + notificaciones · Fase 9: dashboard administrador completo · Fase 10: dashboard vendedor (incluye gestión de tiendas y restricción "solo mis productos") · Fase 11: IA · Fase 12: testing + seguridad + optimización.
 
 **Notas de alcance:**
 - Cualquier usuario con permiso `manage-products`/`manage-services`/`manage-categories`/`manage-brands` puede gestionar todo el catálogo (no hay aún restricción "solo mi tienda") — eso se ajusta en la Fase 10.
 - El checkout requiere iniciar sesión (`orders.user_id` no es nulo); se puede armar el carrito como invitado, pero confirmar el pedido no.
 - Los cupones (`coupons`) no se aplican todavía en el carrito/checkout: no tienen fase asignada explícita en el prompt maestro.
+- El panel `/admin` (Fase 6) es básico a propósito (pedidos + inventario): se adelantó a pedido del usuario para poder visualizar la gestión sin esperar a la Fase 9, que construirá el dashboard administrativo completo (usuarios, roles, cupones, promociones, configuración, etc. — sección 28).

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel administrativo — CASTAMOTO</title>
+<base href="/proyectos/castamotos/">
+<link rel="stylesheet" href="frontend/css/main.css">
+</head>
+<body>
+
+<div id="app-header"></div>
+
+<main class="container">
+  <h1 class="section__title mt-16">Panel administrativo</h1>
+  <p style="color:var(--gris-texto);font-size:0.85rem;">Gestión básica de pedidos e inventario (panel completo en fases posteriores).</p>
+
+  <div class="admin-tabs">
+    <button class="admin-tab is-active" data-tab="orders">Pedidos</button>
+    <button class="admin-tab" data-tab="inventory">Inventario</button>
+  </div>
+
+  <section id="admin-tab-orders">
+    <div class="filters-bar">
+      <select id="orders-status-filter" aria-label="Filtrar por estado">
+        <option value="">Todos los estados</option>
+        <option value="PENDIENTE">Pendiente</option>
+        <option value="CONFIRMADO">Confirmado</option>
+        <option value="PAGO_PENDIENTE">Pago pendiente</option>
+        <option value="PAGO_CONFIRMADO">Pago confirmado</option>
+        <option value="PREPARANDO">Preparando</option>
+        <option value="EN_CAMINO">En camino</option>
+        <option value="ENTREGADO">Entregado</option>
+        <option value="CANCELADO">Cancelado</option>
+        <option value="DEVUELTO">Devuelto</option>
+      </select>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Fecha</th><th>Cambiar a</th><th></th></tr>
+        </thead>
+        <tbody id="orders-table-body">
+          <tr><td colspan="7">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="orders-error" class="form-error mt-16"></div>
+  </section>
+
+  <section id="admin-tab-inventory" hidden>
+    <form id="inventory-filter-form" class="filters-bar">
+      <input id="inventory-search" class="form-control" type="search" placeholder="Buscar por nombre o SKU..." style="max-width:260px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;color:var(--gris-texto);">
+        <input type="checkbox" id="inventory-low-stock" style="width:auto;"> Solo stock bajo
+      </label>
+      <button class="btn btn-secondary" type="submit">Filtrar</button>
+    </form>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Producto</th><th>SKU</th><th>Categoría</th><th>Stock</th><th>Reservado</th><th>Disponible</th><th>Mínimo</th><th>Ajustar</th></tr>
+        </thead>
+        <tbody id="inventory-table-body">
+          <tr><td colspan="8">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="inventory-error" class="form-error mt-16"></div>
+  </section>
+</main>
+
+<div id="app-footer"></div>
+
+<script src="frontend/js/utils/helpers.js"></script>
+<script src="frontend/js/services/apiService.js"></script>
+<script src="frontend/js/services/authService.js"></script>
+<script src="frontend/js/services/catalogService.js"></script>
+<script src="frontend/js/services/cartService.js"></script>
+<script src="frontend/js/services/adminService.js"></script>
+<script src="frontend/js/components/layout.js"></script>
+<script src="frontend/js/pages/admin.js"></script>
+</body>
+</html>

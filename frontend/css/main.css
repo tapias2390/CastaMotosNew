@@ -464,3 +464,26 @@ input, select, textarea { font-family: inherit; }
   color: var(--amarillo);
   margin: 12px 0;
 }
+
+/* --- Panel administrativo (Fase 6) --- */
+.admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--gris-borde); }
+.admin-tab {
+  background: none; border: none; color: var(--gris-texto); padding: 10px 18px;
+  font-weight: 700; font-size: 0.9rem; border-bottom: 3px solid transparent;
+}
+.admin-tab.is-active { color: var(--amarillo); border-bottom-color: var(--amarillo); }
+
+.admin-table-wrap { overflow-x: auto; border: 1px solid var(--gris-borde); border-radius: var(--radio); }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 640px; }
+.admin-table th, .admin-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--gris-borde); white-space: nowrap; }
+.admin-table th { background: var(--negro-suave); color: var(--amarillo); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table select, .admin-table input { padding: 6px 8px; border-radius: var(--radio-sm); border: 1px solid var(--gris-borde); background: var(--negro-suave); color: var(--blanco); font-size: 0.8rem; }
+.admin-table .btn { padding: 6px 12px; font-size: 0.78rem; }
+
+.status-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 700;
+  background: rgba(244, 196, 48, 0.15); color: var(--amarillo);
+}
+.status-badge.is-final-good { background: rgba(47, 179, 68, 0.15); color: var(--exito); }
+.status-badge.is-final-bad { background: rgba(229, 72, 77, 0.15); color: var(--error); }
