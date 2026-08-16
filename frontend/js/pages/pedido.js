@@ -11,7 +11,7 @@ function statusLabel(status) {
 }
 
 async function initOrderConfirmationPage() {
-  const orderNumber = helpers.queryParam('number');
+  const orderNumber = helpers.routeParam('number', 'pedido');
   const mount = document.getElementById('order-mount');
 
   if (!authService.isAuthenticated()) {

@@ -12,6 +12,22 @@ const helpers = {
     return new URLSearchParams(window.location.search).get(name);
   },
 
+  /**
+   * Lee un parámetro de una URL amigable tipo /producto/{slug} (reescrita en
+   * el .htaccess de la raíz hacia producto.html?slug={slug}). La reescritura
+   * ocurre en el servidor: el navegador NUNCA ve la URL con querystring, la
+   * barra de direcciones sigue mostrando /producto/{slug} — por eso
+   * queryParam() por sí solo no encuentra nada al entrar por la ruta amigable.
+   * Este método primero intenta leer el segmento final de la ruta real que sí
+   * ve el navegador, y solo si no aplica cae a queryParam() (útil si alguna
+   * vez se abre el .html directo con ?param=valor, ej. en pruebas).
+   */
+  routeParam(paramName, pathMarker) {
+    const match = window.location.pathname.match(new RegExp(`${pathMarker}/([^/]+)/?$`));
+    if (match) return decodeURIComponent(match[1]);
+    return helpers.queryParam(paramName);
+  },
+
   escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text ?? '';

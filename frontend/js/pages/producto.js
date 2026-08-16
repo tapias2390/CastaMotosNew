@@ -202,7 +202,7 @@ function wireProductDetailEvents(product) {
 }
 
 async function initProductDetailPage() {
-  const slug = helpers.queryParam('slug');
+  const slug = helpers.routeParam('slug', 'producto');
   const mount = document.getElementById('product-detail-mount');
 
   if (!slug) {

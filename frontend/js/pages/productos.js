@@ -112,7 +112,10 @@ async function initProductsPage() {
   const searchParam = helpers.queryParam('search');
   if (searchParam) document.getElementById('filter-search-input').value = searchParam;
 
-  const categorySlug = helpers.queryParam('category');
+  // /categoria/{slug} llega con el slug en la RUTA (reescritura invisible para
+  // el navegador), no como querystring real — a diferencia de "search"/"on_sale"
+  // arriba, que sí son query params genuinos en la URL que el usuario navegó.
+  const categorySlug = helpers.routeParam('category', 'categoria');
   if (categorySlug && categorySlugToId[categorySlug]) {
     document.getElementById('filter-category').value = String(categorySlugToId[categorySlug]);
   }

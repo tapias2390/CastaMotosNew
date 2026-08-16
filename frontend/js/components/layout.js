@@ -259,7 +259,14 @@ function renderFooter() {
   `;
 }
 
-function initLayout() {
+async function initLayout() {
+  // Si hay token guardado, se refresca el usuario contra el backend ANTES de
+  // pintar el header: así el link "Admin" (y el nombre mostrado) siempre
+  // reflejan el rol real actual, no una copia vieja de localStorage.
+  if (authService.isAuthenticated()) {
+    await authService.refreshUser();
+  }
+
   renderHeaderShell();
   initAuthModalEvents();
   renderFooter();

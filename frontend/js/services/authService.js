@@ -12,6 +12,30 @@ const authService = {
     return !!apiService.authToken();
   },
 
+  /**
+   * Vuelve a pedir el usuario actual al backend (GET /auth/me) y actualiza
+   * la copia en localStorage. Sin esto, "castamoto_user" solo se escribe en
+   * login/registro: si el rol de una cuenta cambia en el servidor, o si el
+   * dato quedó desactualizado por una sesión anterior, el header seguiría
+   * mostrando (o escondiendo) el link "Admin" con datos viejos para siempre,
+   * sin importar cuántas veces se recargue la página. Se llama en cada carga
+   * de layout (ver initLayout) cuando hay token guardado.
+   */
+  async refreshUser() {
+    if (!apiService.authToken()) return null;
+
+    try {
+      const user = await apiService.get('/auth/me');
+      localStorage.setItem('castamoto_user', JSON.stringify(user));
+      return user;
+    } catch (error) {
+      // Token vencido o inválido: se limpia la sesión para no quedar en un
+      // estado inconsistente (token guardado pero backend ya no lo reconoce).
+      this.logout();
+      return null;
+    }
+  },
+
   async login(email, password, remember = false) {
     const data = await apiService.post('/auth/login', { email, password, remember });
     this.persistSession(data);

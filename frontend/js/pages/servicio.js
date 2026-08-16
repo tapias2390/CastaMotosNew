@@ -94,7 +94,7 @@ function renderServiceDetail(service) {
 }
 
 async function initServiceDetailPage() {
-  const slug = helpers.queryParam('slug');
+  const slug = helpers.routeParam('slug', 'servicio');
   const mount = document.getElementById('service-detail-mount');
 
   if (!slug) {
