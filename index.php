@@ -29,9 +29,22 @@
 </section>
 
 <main class="container">
+  <div class="promo-banner">
+    <div class="promo-banner__text">
+      <h2>Todo para tu moto, con envío a todo el país</h2>
+      <p>Repuestos, accesorios y servicios especializados en un solo lugar.</p>
+    </div>
+    <a class="btn btn-primary" href="productos">Explorar productos</a>
+  </div>
+
   <section class="section">
     <h2 class="section__title">Categorías</h2>
     <div id="home-categories"><p class="loading-state">Cargando categorías…</p></div>
+  </section>
+
+  <section class="section" id="home-deals-section" hidden>
+    <h2 class="section__title">Ofertas</h2>
+    <div id="home-deals"></div>
   </section>
 
   <section class="section">

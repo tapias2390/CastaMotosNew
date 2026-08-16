@@ -12,16 +12,35 @@
 <div id="app-header"></div>
 
 <main class="container">
-  <h1 class="section__title mt-16">Servicios</h1>
+  <nav class="breadcrumbs" aria-label="Ruta de navegación">
+    <a href=".">Inicio</a> › <span aria-current="page">Servicios</span>
+  </nav>
 
-  <form id="service-filter-form" class="filters-bar">
-    <select id="filter-service-category" aria-label="Categoría"><option value="">Todas las categorías</option></select>
-    <input id="filter-service-location" class="form-control" placeholder="Ciudad / ubicación" style="max-width:200px;">
-    <input id="filter-service-search" class="form-control" type="search" placeholder="Buscar servicios..." style="flex:1;min-width:200px;">
-    <button class="btn btn-secondary" type="submit">Buscar</button>
-  </form>
+  <div class="catalog-layout mt-16">
+    <aside class="filters-sidebar">
+      <h2>Filtrar</h2>
+      <form id="service-filter-form">
+        <div class="form-group">
+          <label class="sr-only" for="filter-service-search">Buscar</label>
+          <input id="filter-service-search" class="form-control" type="search" placeholder="Buscar servicios...">
+        </div>
+        <div class="form-group">
+          <label for="filter-service-category">Categoría</label>
+          <select id="filter-service-category" class="form-control"><option value="">Todas</option></select>
+        </div>
+        <div class="form-group">
+          <label for="filter-service-location">Ubicación</label>
+          <input id="filter-service-location" class="form-control" placeholder="Ciudad">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Aplicar filtros</button>
+      </form>
+    </aside>
 
-  <div id="services-results"><p class="loading-state">Cargando servicios…</p></div>
+    <div>
+      <h1 class="section__title" style="font-size:1.2rem;margin-top:0;">Servicios</h1>
+      <div id="services-results"><p class="loading-state">Cargando servicios…</p></div>
+    </div>
+  </div>
 </main>
 
 <div id="app-footer"></div>

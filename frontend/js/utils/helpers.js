@@ -44,4 +44,28 @@ const helpers = {
     if (!errors || typeof errors !== 'object') return '';
     return Object.values(errors).flat().join(' ');
   },
+
+  /**
+   * Estrellas ★★★★☆ a partir del promedio (0-5). Sin reseñas todavía
+   * (rating_count = 0, sección 26 llega en una fase futura) no se muestra
+   * nada, en vez de simular "0 estrellas" como si hubiera sido calificado.
+   */
+  renderStars(average, count) {
+    const total = Number(count) || 0;
+    if (total === 0) return '';
+
+    const rounded = Math.round(Number(average) || 0);
+    const stars = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+    return `<span class="stars">${stars}</span> <span>(${total})</span>`;
+  },
+
+  /** Ícono por categoría (mismo criterio que los placeholders de DemoDataSeeder). */
+  categoryIcon(slug) {
+    const icons = {
+      cascos: '🪖', guantes: '🧤', chaquetas: '🧥', llantas: '🛞',
+      lubricantes: '🛢️', herramientas: '🔧', electronica: '📡',
+      accesorios: '🎒', repuestos: '⚙️', servicios: '🔧', motocicletas: '🏍️',
+    };
+    return icons[slug] || '🏍️';
+  },
 };

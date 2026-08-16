@@ -5,6 +5,7 @@
  */
 let currentPage = 1;
 let categorySlugToId = {};
+let onSaleOnly = false;
 
 function flattenCategories(tree) {
   return tree.reduce((flat, node) => flat.concat([node], flattenCategories(node.children || [])), []);
@@ -39,6 +40,7 @@ function currentFilters() {
     availability: document.getElementById('filter-availability').value || undefined,
     sort: document.getElementById('filter-sort').value || undefined,
     search: document.getElementById('filter-search-input').value || undefined,
+    on_sale: onSaleOnly ? 1 : undefined,
     page: currentPage,
     per_page: 12,
   };
@@ -97,6 +99,11 @@ function wireFilterEvents() {
     currentPage = 1;
     loadProducts();
   });
+
+  document.getElementById('apply-filters-btn').addEventListener('click', () => {
+    currentPage = 1;
+    loadProducts();
+  });
 }
 
 async function initProductsPage() {
@@ -108,6 +115,11 @@ async function initProductsPage() {
   const categorySlug = helpers.queryParam('category');
   if (categorySlug && categorySlugToId[categorySlug]) {
     document.getElementById('filter-category').value = String(categorySlugToId[categorySlug]);
+  }
+
+  if (helpers.queryParam('on_sale') === '1') {
+    onSaleOnly = true;
+    document.getElementById('products-page-title').textContent = 'Ofertas';
   }
 
   wireFilterEvents();

@@ -235,8 +235,25 @@ function renderFooter() {
   mount.innerHTML = `
     <footer class="site-footer">
       <div class="container">
-        <p><strong>CASTAMOTO</strong> — Todo para tu moto.</p>
-        <p>Plataforma en construcción progresiva. © ${new Date().getFullYear()}</p>
+        <div class="site-footer__grid">
+          <div class="site-footer__col">
+            <h3>CASTAMOTO</h3>
+            <p style="color:var(--gris-texto);font-size:0.85rem;">Todo para tu moto: repuestos, accesorios y servicios especializados.</p>
+          </div>
+          <div class="site-footer__col">
+            <h3>Comprar</h3>
+            <a href="productos">Todos los productos</a>
+            <a href="servicios">Servicios</a>
+            <a href="productos?on_sale=1">Ofertas</a>
+          </div>
+          <div class="site-footer__col">
+            <h3>Mi cuenta</h3>
+            <a href="carrito">Carrito</a>
+          </div>
+        </div>
+        <div class="site-footer__bottom">
+          Plataforma en construcción progresiva. © ${new Date().getFullYear()} CASTAMOTO
+        </div>
       </div>
     </footer>
   `;

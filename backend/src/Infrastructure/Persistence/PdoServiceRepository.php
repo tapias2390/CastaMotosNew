@@ -133,7 +133,7 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
 
     public function findBySlug(string $slug, bool $includeAllStatuses = false): ?array
     {
-        $sql = 'SELECT s.*, c.name AS category_name
+        $sql = 'SELECT s.*, c.name AS category_name, c.slug AS category_slug
                 FROM services s
                 LEFT JOIN categories c ON c.id = s.category_id
                 WHERE s.slug = :slug AND s.deleted_at IS NULL';

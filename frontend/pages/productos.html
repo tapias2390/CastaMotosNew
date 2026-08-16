@@ -12,37 +12,62 @@
 <div id="app-header"></div>
 
 <main class="container">
-  <h1 class="section__title mt-16">Productos</h1>
+  <nav class="breadcrumbs" aria-label="Ruta de navegación">
+    <a href=".">Inicio</a> › <span aria-current="page">Productos</span>
+  </nav>
 
-  <div class="filters-bar">
-    <select id="filter-category" aria-label="Categoría"><option value="">Todas las categorías</option></select>
-    <select id="filter-brand" aria-label="Marca"><option value="">Todas las marcas</option></select>
-    <input id="filter-min-price" type="number" placeholder="Precio mínimo" aria-label="Precio mínimo">
-    <input id="filter-max-price" type="number" placeholder="Precio máximo" aria-label="Precio máximo">
-    <select id="filter-availability" aria-label="Disponibilidad">
-      <option value="">Cualquier disponibilidad</option>
-      <option value="disponible">Disponible</option>
-      <option value="ultimas_unidades">Últimas unidades</option>
-      <option value="agotado">Agotado</option>
-    </select>
-    <select id="filter-sort" aria-label="Ordenar por">
-      <option value="newest">Más recientes</option>
-      <option value="relevancia">Relevancia</option>
-      <option value="price_asc">Precio: menor a mayor</option>
-      <option value="price_desc">Precio: mayor a menor</option>
-      <option value="name">Nombre A-Z</option>
-      <option value="rating">Mejor calificados</option>
-    </select>
-    <form id="filter-search-form" style="display:flex;gap:4px;flex:1;min-width:200px;">
-      <label class="sr-only" for="filter-search-input">Buscar</label>
-      <input class="form-control" id="filter-search-input" type="search" placeholder="Buscar en productos...">
-      <button class="btn btn-secondary" type="submit">Buscar</button>
-    </form>
+  <div class="catalog-layout mt-16">
+    <aside class="filters-sidebar">
+      <h2>Filtrar</h2>
+      <form id="filter-search-form" class="form-group">
+        <label class="sr-only" for="filter-search-input">Buscar</label>
+        <input class="form-control" id="filter-search-input" type="search" placeholder="Buscar en productos...">
+      </form>
+      <div class="form-group">
+        <label for="filter-category">Categoría</label>
+        <select id="filter-category" class="form-control"><option value="">Todas</option></select>
+      </div>
+      <div class="form-group">
+        <label for="filter-brand">Marca</label>
+        <select id="filter-brand" class="form-control"><option value="">Todas</option></select>
+      </div>
+      <div class="form-group">
+        <label>Precio</label>
+        <div class="flex gap-8">
+          <input id="filter-min-price" class="form-control" type="number" placeholder="Mín.">
+          <input id="filter-max-price" class="form-control" type="number" placeholder="Máx.">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="filter-availability">Disponibilidad</label>
+        <select id="filter-availability" class="form-control">
+          <option value="">Cualquiera</option>
+          <option value="disponible">Disponible</option>
+          <option value="ultimas_unidades">Últimas unidades</option>
+          <option value="agotado">Agotado</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-block" id="apply-filters-btn">Aplicar filtros</button>
+    </aside>
+
+    <div>
+      <h1 id="products-page-title" class="section__title" style="font-size:1.2rem;margin-top:0;">Productos</h1>
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <p id="products-count" style="color:var(--gris-texto);font-size:0.85rem;margin:0;"></p>
+        <select id="filter-sort" class="form-control" style="width:auto;" aria-label="Ordenar por">
+          <option value="newest">Más recientes</option>
+          <option value="relevancia">Relevancia</option>
+          <option value="price_asc">Precio: menor a mayor</option>
+          <option value="price_desc">Precio: mayor a menor</option>
+          <option value="name">Nombre A-Z</option>
+          <option value="rating">Mejor calificados</option>
+        </select>
+      </div>
+
+      <div id="products-results"><p class="loading-state">Cargando productos…</p></div>
+      <div class="text-center mt-16" id="products-pagination"></div>
+    </div>
   </div>
-
-  <p id="products-count" style="color:var(--gris-texto);font-size:0.85rem;"></p>
-  <div id="products-results"><p class="loading-state">Cargando productos…</p></div>
-  <div class="text-center mt-16" id="products-pagination"></div>
 </main>
 
 <div id="app-footer"></div>

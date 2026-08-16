@@ -19,9 +19,16 @@ function serviceShareLinks(service) {
 function renderServiceDetail(service) {
   const image = service.images && service.images.length > 0 ? helpers.mediaUrl('services', service.images[0].url) : null;
   const links = serviceShareLinks(service);
+  const breadcrumbCategory = service.category_slug
+    ? `<a href="categoria/${encodeURIComponent(service.category_slug)}">${helpers.escapeHtml(service.category_name)}</a>`
+    : helpers.escapeHtml(service.category_name || '');
 
   document.getElementById('service-detail-mount').innerHTML = `
-    <div class="detail-grid">
+    <nav class="breadcrumbs" aria-label="Ruta de navegación">
+      <a href=".">Inicio</a> › <a href="servicios">Servicios</a>
+      ${breadcrumbCategory ? ` › ${breadcrumbCategory}` : ''} › <span aria-current="page">${helpers.escapeHtml(service.name)}</span>
+    </nav>
+    <div class="detail-grid mt-16">
       <div class="detail-gallery__main">
         ${image ? `<img src="${image}" alt="${helpers.escapeHtml(service.name)}">` : 'Sin imagen disponible'}
       </div>

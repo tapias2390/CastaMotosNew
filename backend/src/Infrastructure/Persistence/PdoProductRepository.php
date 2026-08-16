@@ -119,6 +119,12 @@ final class PdoProductRepository implements ProductRepositoryInterface
             $params['rating_min'] = (float) $filters['rating_min'];
         }
 
+        // "Ofertas" (sección de Home tipo marketplace): solo productos con
+        // descuento real ya cargado, nunca una cuenta regresiva ni datos inventados.
+        if (!empty($filters['on_sale'])) {
+            $conditions[] = 'p.discount_percentage > 0';
+        }
+
         // Disponibilidad (sección 14), sobre las mismas reglas de withStockStatus().
         if (!empty($filters['availability'])) {
             $conditions[] = match ($filters['availability']) {
@@ -188,7 +194,7 @@ final class PdoProductRepository implements ProductRepositoryInterface
 
     public function findBySlug(string $slug, bool $includeAllStatuses = false): ?array
     {
-        $sql = "SELECT p.*, c.name AS category_name, b.name AS brand_name, s.name AS store_name
+        $sql = "SELECT p.*, c.name AS category_name, c.slug AS category_slug, b.name AS brand_name, s.name AS store_name
                 FROM products p
                 LEFT JOIN categories c ON c.id = p.category_id
                 LEFT JOIN brands b ON b.id = p.brand_id

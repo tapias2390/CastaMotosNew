@@ -66,36 +66,57 @@ function renderProductDetail(product) {
   const links = shareLinks(product);
   const hasDiscount = product.previous_price && Number(product.previous_price) > Number(product.price);
 
+  const breadcrumbCategory = product.category_slug
+    ? `<a href="categoria/${encodeURIComponent(product.category_slug)}">${helpers.escapeHtml(product.category_name)}</a>`
+    : helpers.escapeHtml(product.category_name || '');
+  const stars = helpers.renderStars(product.rating_avg, product.rating_count);
+
   document.getElementById('product-detail-mount').innerHTML = `
-    <div class="detail-grid">
+    <nav class="breadcrumbs" aria-label="Ruta de navegación">
+      <a href=".">Inicio</a> › <a href="productos">Productos</a>
+      ${breadcrumbCategory ? ` › ${breadcrumbCategory}` : ''} › <span aria-current="page">${helpers.escapeHtml(product.name)}</span>
+    </nav>
+    <div class="detail-grid mt-16">
       ${galleryMarkup(product)}
       <div>
         <h1>${helpers.escapeHtml(product.name)}</h1>
         <p style="color:var(--gris-texto);">${product.brand_name ? helpers.escapeHtml(product.brand_name) + ' · ' : ''}SKU ${helpers.escapeHtml(product.sku)}</p>
-        <span class="badge badge-${stockStatus}">${stockLabel}</span>
-        <p style="font-size:1.8rem;font-weight:800;color:var(--amarillo);margin:12px 0 4px;">
-          ${helpers.formatCurrency(product.price)}
-          ${hasDiscount ? `<span class="card__price-old" style="font-size:1rem;">${helpers.formatCurrency(product.previous_price)}</span>` : ''}
-        </p>
-        ${product.short_description ? `<p style="color:var(--gris-texto);">${helpers.escapeHtml(product.short_description)}</p>` : ''}
+        ${stars ? `<p class="rating-summary">${stars}</p>` : ''}
 
-        ${variantOptionsMarkup(product)}
+        <div class="purchase-box mt-16">
+          <span class="badge badge-${stockStatus}">${stockLabel}</span>
+          <p style="font-size:1.8rem;font-weight:800;color:var(--amarillo);margin:12px 0 4px;">
+            ${helpers.formatCurrency(product.price)}
+            ${hasDiscount ? `<span class="card__price-old" style="font-size:1rem;">${helpers.formatCurrency(product.previous_price)}</span>` : ''}
+          </p>
+          ${product.short_description ? `<p style="color:var(--gris-texto);">${helpers.escapeHtml(product.short_description)}</p>` : ''}
 
-        <div class="form-row" style="align-items:flex-end;">
-          <div class="form-group" style="max-width:120px;">
-            <label for="add-quantity">Cantidad</label>
-            <input class="form-control" type="number" id="add-quantity" value="1" min="1" max="${product.stock}">
+          ${variantOptionsMarkup(product)}
+
+          <div class="form-row" style="align-items:flex-end;">
+            <div class="form-group" style="max-width:120px;">
+              <label for="add-quantity">Cantidad</label>
+              <input class="form-control" type="number" id="add-quantity" value="1" min="1" max="${product.stock}">
+            </div>
+            <div class="form-group" style="flex:2;">
+              <button class="btn btn-primary btn-block" id="add-to-cart-btn" ${stockStatus === 'agotado' ? 'disabled' : ''}>
+                ${stockStatus === 'agotado' ? 'Agotado' : 'Agregar al carrito'}
+              </button>
+            </div>
           </div>
-          <div class="form-group" style="flex:2;">
-            <button class="btn btn-primary btn-block" id="add-to-cart-btn" ${stockStatus === 'agotado' ? 'disabled' : ''}>
-              ${stockStatus === 'agotado' ? 'Agotado' : 'Agregar al carrito'}
-            </button>
-          </div>
+
+          <button class="btn btn-secondary btn-block" id="favorite-btn">
+            ${product.is_favorite ? '♥ En favoritos' : '♡ Agregar a favoritos'}
+          </button>
         </div>
 
-        <button class="btn btn-secondary" id="favorite-btn">
-          ${product.is_favorite ? '♥ En favoritos' : '♡ Agregar a favoritos'}
-        </button>
+        <div class="seller-box">
+          <span class="seller-box__icon">🏍️</span>
+          <div>
+            <div class="seller-box__name">Vendido por ${helpers.escapeHtml(product.store_name || 'CASTAMOTO')}</div>
+            <div class="seller-box__meta">${product.store_name ? 'Tienda del marketplace' : 'Vendido y despachado directamente por CASTAMOTO'}</div>
+          </div>
+        </div>
 
         <div class="share-row">
           <a class="share-btn" href="${links.whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
@@ -113,7 +134,7 @@ function renderProductDetail(product) {
 
     <div class="section">
       <h2 class="section__title">Productos relacionados</h2>
-      <div class="grid" id="related-products"></div>
+      <div class="carousel" id="related-products"></div>
     </div>
   `;
 
