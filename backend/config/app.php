@@ -83,4 +83,11 @@ return [
         'email' => $_ENV['ADMIN_EMAIL'] ?? 'admin@castamoto.local',
         'password' => $_ENV['ADMIN_PASSWORD'] ?? null,
     ],
+
+    'contact' => [
+        // Número de WhatsApp del negocio, formato internacional sin "+" ni espacios
+        // (ej. 573001234567), tal como lo exige la API de wa.me. Se expone solo vía
+        // GET /api/settings/public (SettingsController) — nunca se hardcodea en el frontend.
+        'whatsapp_number' => $_ENV['CONTACT_WHATSAPP_NUMBER'] ?? '',
+    ],
 ];

@@ -10,6 +10,21 @@ function statusLabel(status) {
   return labels[status] || status;
 }
 
+/**
+ * Enlace de WhatsApp con el resumen del pedido ya escrito (sección 17: compartir).
+ * Se arma con datos reales del pedido — nunca un texto genérico inventado — y
+ * el botón solo se muestra si hay un número de contacto configurado
+ * (CONTACT_WHATSAPP_NUMBER en backend/.env, ver settingsService.js).
+ */
+function orderWhatsappLink(order, whatsappNumber) {
+  if (!whatsappNumber) return null;
+
+  const itemsText = order.items.map((item) => `- ${item.quantity}× ${item.name_snapshot}`).join('\n');
+  const message = `Hola CASTAMOTO! Quiero coordinar mi pedido *${order.order_number}*:\n${itemsText}\nTotal: ${helpers.formatCurrency(order.total)}`;
+
+  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+}
+
 async function initOrderConfirmationPage() {
   const orderNumber = helpers.routeParam('number', 'pedido');
   const mount = document.getElementById('order-mount');
@@ -25,7 +40,8 @@ async function initOrderConfirmationPage() {
   }
 
   try {
-    const order = await cartService.order(orderNumber);
+    const [order, settings] = await Promise.all([cartService.order(orderNumber), settingsService.get()]);
+    const whatsappLink = orderWhatsappLink(order, settings.contact_whatsapp_number);
 
     mount.innerHTML = `
       <div class="confirmation-box">
@@ -46,7 +62,8 @@ async function initOrderConfirmationPage() {
         <div class="summary-row total"><span>Total</span><span>${helpers.formatCurrency(order.total)}</span></div>
       </div>
 
-      <div class="mt-16">
+      <div class="mt-16 flex gap-8" style="flex-wrap:wrap;">
+        ${whatsappLink ? `<a class="btn btn-whatsapp" href="${whatsappLink}" target="_blank" rel="noopener">📲 Enviar pedido por WhatsApp</a>` : ''}
         <a class="btn btn-primary" href="productos">Seguir comprando</a>
       </div>
     `;

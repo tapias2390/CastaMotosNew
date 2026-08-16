@@ -19,20 +19,10 @@ function shareLinks(product) {
   };
 }
 
-function galleryMarkup(product) {
-  const images = product.images && product.images.length > 0
+function productImageUrls(product) {
+  return product.images && product.images.length > 0
     ? product.images.map((img) => helpers.mediaUrl('products', img.url))
-    : [null];
-
-  const main = images[0]
-    ? `<img id="gallery-main-img" src="${images[0]}" alt="${helpers.escapeHtml(product.name)}">`
-    : `<span id="gallery-main-img">Sin imagen disponible</span>`;
-
-  const thumbs = images.length > 1
-    ? `<div class="detail-gallery__thumbs">${images.map((src, index) => src ? `<img src="${src}" class="${index === 0 ? 'is-active' : ''}" data-full="${src}">` : '').join('')}</div>`
-    : '';
-
-  return `<div class="detail-gallery"><div class="detail-gallery__main">${main}</div>${thumbs}</div>`;
+    : [];
 }
 
 function variantOptionsMarkup(product) {
@@ -77,7 +67,7 @@ function renderProductDetail(product) {
       ${breadcrumbCategory ? ` › ${breadcrumbCategory}` : ''} › <span aria-current="page">${helpers.escapeHtml(product.name)}</span>
     </nav>
     <div class="detail-grid mt-16">
-      ${galleryMarkup(product)}
+      ${gallery360Markup(productImageUrls(product), product.name)}
       <div>
         <h1>${helpers.escapeHtml(product.name)}</h1>
         <p style="color:var(--gris-texto);">${product.brand_name ? helpers.escapeHtml(product.brand_name) + ' · ' : ''}SKU ${helpers.escapeHtml(product.sku)}</p>
@@ -142,13 +132,7 @@ function renderProductDetail(product) {
 }
 
 function wireProductDetailEvents(product) {
-  document.querySelectorAll('.detail-gallery__thumbs img').forEach((thumb) => {
-    thumb.addEventListener('click', () => {
-      document.getElementById('gallery-main-img').src = thumb.dataset.full;
-      document.querySelectorAll('.detail-gallery__thumbs img').forEach((img) => img.classList.remove('is-active'));
-      thumb.classList.add('is-active');
-    });
-  });
+  initGallery360(productImageUrls(product));
 
   document.getElementById('add-to-cart-btn')?.addEventListener('click', async () => {
     const quantity = Number(document.getElementById('add-quantity').value) || 1;

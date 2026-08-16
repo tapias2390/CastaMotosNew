@@ -19,6 +19,7 @@ use App\Presentation\Controllers\ProductController;
 use App\Presentation\Controllers\ProfileController;
 use App\Presentation\Controllers\SearchController;
 use App\Presentation\Controllers\ServiceController;
+use App\Presentation\Controllers\SettingsController;
 use App\Presentation\Middleware\AuthMiddleware;
 use App\Presentation\Middleware\OptionalAuthMiddleware;
 use App\Presentation\Middleware\RequirePermissionMiddleware;
@@ -31,6 +32,7 @@ use App\Presentation\Middleware\RequirePermissionMiddleware;
  */
 
 $router->get('api/health', [HealthController::class, 'index']);
+$router->get('api/settings/public', [SettingsController::class, 'publicSettings']);
 
 // --- Autenticación (Fase 2) ---
 $router->post('api/auth/register', [AuthController::class, 'register']);

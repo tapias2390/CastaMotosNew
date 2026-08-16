@@ -16,8 +16,19 @@ function serviceShareLinks(service) {
   };
 }
 
+function serviceImageUrls(service) {
+  return service.images && service.images.length > 0
+    ? service.images.map((img) => helpers.mediaUrl('services', img.url))
+    : [];
+}
+
+/** Enlace real a Google Maps con la dirección tal como la escribió el vendedor
+ * (sin geocodificar ni inventar coordenadas) — "sección cómo llegar". */
+function directionsLink(location) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+}
+
 function renderServiceDetail(service) {
-  const image = service.images && service.images.length > 0 ? helpers.mediaUrl('services', service.images[0].url) : null;
   const links = serviceShareLinks(service);
   const breadcrumbCategory = service.category_slug
     ? `<a href="categoria/${encodeURIComponent(service.category_slug)}">${helpers.escapeHtml(service.category_name)}</a>`
@@ -29,15 +40,18 @@ function renderServiceDetail(service) {
       ${breadcrumbCategory ? ` › ${breadcrumbCategory}` : ''} › <span aria-current="page">${helpers.escapeHtml(service.name)}</span>
     </nav>
     <div class="detail-grid mt-16">
-      <div class="detail-gallery__main">
-        ${image ? `<img src="${image}" alt="${helpers.escapeHtml(service.name)}">` : 'Sin imagen disponible'}
-      </div>
+      ${gallery360Markup(serviceImageUrls(service), service.name)}
       <div>
         <h1>${helpers.escapeHtml(service.name)}</h1>
         ${service.category_name ? `<p style="color:var(--gris-texto);">${helpers.escapeHtml(service.category_name)}</p>` : ''}
         <p style="font-size:1.8rem;font-weight:800;color:var(--amarillo);margin:12px 0 4px;">${helpers.formatCurrency(service.price)}</p>
         ${service.duration_minutes ? `<p style="color:var(--gris-texto);">Duración estimada: ${service.duration_minutes} min</p>` : ''}
-        ${service.location ? `<p style="color:var(--gris-texto);">📍 ${helpers.escapeHtml(service.location)}</p>` : ''}
+        ${service.location ? `
+          <p style="color:var(--gris-texto);">
+            📍 ${helpers.escapeHtml(service.location)}
+            — <a href="${directionsLink(service.location)}" target="_blank" rel="noopener" style="color:var(--amarillo);">Cómo llegar</a>
+          </p>
+        ` : ''}
 
         <button class="btn btn-primary" id="add-service-to-cart-btn">Agregar al carrito</button>
         <button class="btn btn-secondary" id="service-favorite-btn">
@@ -57,6 +71,8 @@ function renderServiceDetail(service) {
       </div>
     </div>
   `;
+
+  initGallery360(serviceImageUrls(service));
 
   document.getElementById('add-service-to-cart-btn').addEventListener('click', async () => {
     try {
