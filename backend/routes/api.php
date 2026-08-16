@@ -12,6 +12,7 @@ use App\Presentation\Controllers\CheckoutController;
 use App\Presentation\Controllers\FavoriteController;
 use App\Presentation\Controllers\HealthController;
 use App\Presentation\Controllers\MediaController;
+use App\Presentation\Controllers\PaymentMethodController;
 use App\Presentation\Controllers\ProductController;
 use App\Presentation\Controllers\ProfileController;
 use App\Presentation\Controllers\SearchController;
@@ -103,6 +104,9 @@ $router->post('api/cart/items', [CartController::class, 'addItem'], [new Optiona
 $router->put('api/cart/items/{itemId}', [CartController::class, 'updateItem'], [new OptionalAuthMiddleware()]);
 $router->delete('api/cart/items/{itemId}', [CartController::class, 'removeItem'], [new OptionalAuthMiddleware()]);
 $router->delete('api/cart', [CartController::class, 'clear'], [new OptionalAuthMiddleware()]);
+
+// --- Métodos de pago habilitados (consulta pública para el checkout) ---
+$router->get('api/payment-methods', [PaymentMethodController::class, 'index']);
 
 // --- Checkout y pedidos (Fase 5 / sección 19) ---
 $router->post('api/checkout', [CheckoutController::class, 'store'], [new AuthMiddleware()]);

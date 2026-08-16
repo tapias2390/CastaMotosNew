@@ -71,6 +71,16 @@ Controller
 - **Carrito de invitado vs. autenticado**: se resuelven con la misma interfaz (`CartRepositoryInterface::resolveActiveCart(?userId, ?token)`); el token de invitado viaja en el header `X-Cart-Token` (no cookie, para no acoplarse a un dominio/frontend concreto todavía). `mergeGuestCartIntoUser()` se dispara desde `AuthController::login` (Fase 2, extendido) para no perder el carrito armado antes de iniciar sesión.
 - **Envío con tarifa plana**: es un cálculo provisional (`CartPricingCalculator`) hasta que exista integración real con transportadoras (sección 51). Cambiarlo no debería afectar a `CheckoutUseCase` ni al esquema de `orders`.
 
+## Frontend y documentación interactiva
+
+El prompt maestro (sección 55) numera 12 fases pero ninguna se llama explícitamente "construir el frontend" — solo describe sus requisitos (secciones 39-41). Tras la Fase 5 el proyecto tenía una API completa pero ninguna página real la consumía. Se construyó un frontend funcional y Swagger en paralelo a las fases de backend, no como una fase numerada más:
+
+- **Mismo origen, sin CORS**: el frontend se sirve desde la misma raíz que `/api/*` (`http://localhost/proyectos/castamotos/`), así que nunca hizo falta configurar CORS para desarrollo — `fetch` a rutas relativas `/api/...` funciona directo.
+- **Vanilla JS, sin build step**: `<script>` clásicos en orden de dependencia (`helpers` → `apiService` → el resto de servicios → `layout`/`cards` → el script de la página). Los `const`/`function` de nivel superior de cada archivo quedan visibles para los `<script>` siguientes en el mismo HTML (mismo ámbito global del documento) — no hace falta un bundler ni módulos ES para este alcance.
+- **`apiService.js` es el único que sabe hablar con el backend**: agrega `Authorization`/`X-Cart-Token` automáticamente y traduce la envoltura `{success, message, data|errors}` del backend a un valor de retorno o una excepción con `.fields`/`.status`. Todos los demás servicios (`authService`, `catalogService`, `cartService`) son adaptadores delgados sobre él.
+- **URLs amigables resueltas en `.htaccess`, no en el router de PHP**: `/producto/{slug}`, `/categoria/{slug}`, etc. se reescriben a archivos HTML estáticos con querystring (`producto.html?slug=...`), consistentes con el `canonical_url` que la API ya devuelve desde la Fase 4 (sección 31). Los archivos de `frontend/pages` no necesitan saber que existe reescritura: leen el slug de `location.search`.
+- **`api-docs/` vive fuera de `/api/`** a propósito: así el `RewriteRule ^api/(.*)$ ...` de la raíz nunca la intercepta y Apache la sirve como estático sin pasar por el front controller del backend.
+
 ## Por qué estas decisiones
 
 - **Sin framework pesado (Laravel/Symfony):** el prompt maestro pide PHP "puro" con arquitectura propia. Se construyó un micro-framework interno (Router, Kernel, Migrator) suficiente para las necesidades del proyecto, sin la sobrecarga de una dependencia grande.

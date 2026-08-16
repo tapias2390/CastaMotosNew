@@ -1,6 +1,6 @@
 # CASTAMOTO
 
-Plataforma e-commerce y marketplace de motocicletas. Este README refleja el estado actual del proyecto tras la **Fase 5 (Carrito + Checkout)**. Se irá ampliando en cada fase siguiente (ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y el documento de especificación `Prompt maestro — Plataforma e-commerce CASTAMOTO...md`).
+Plataforma e-commerce y marketplace de motocicletas. Backend: Fases 1-5 completas (arquitectura, auth/roles, catálogo, búsqueda/favoritos, carrito/checkout). Además del backend, ya existe un **frontend funcional real** (Home + productos + servicios + carrito + checkout + login/registro) y documentación **Swagger/OpenAPI** interactiva — el prompt maestro no les asigna un número de fase propio (sección 55 solo numera hitos de backend), así que se construyeron en paralelo para que la plataforma sea usable de punta a punta, no solo una colección de endpoints. Se irá ampliando en cada fase siguiente (ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y el documento de especificación `Prompt maestro — Plataforma e-commerce CASTAMOTO...md`).
 
 ## Requisitos
 
@@ -49,8 +49,24 @@ El usuario administrador inicial se crea con el correo/clave definidos en `.env`
 
 Con Apache y MySQL corriendo desde el panel de control de XAMPP, y el proyecto ubicado en `htdocs/proyectos/castamotos`:
 
-- Home (placeholder de la Fase 1): `http://localhost/proyectos/castamotos/`
+- **Home (frontend real):** `http://localhost/proyectos/castamotos/`
+- **Documentación interactiva de la API (Swagger UI):** `http://localhost/proyectos/castamotos/api-docs/`
 - Estado de la API: `http://localhost/proyectos/castamotos/api/health`
+
+### Navegación del frontend
+
+| Ruta amigable | Página |
+|---|---|
+| `/` | Home: categorías, productos y servicios destacados |
+| `/productos`, `/categoria/{slug}` | Listado de productos con filtros |
+| `/producto/{slug}` | Detalle de producto (galería, variantes, favorito, compartir) |
+| `/servicios` | Listado de servicios |
+| `/servicio/{slug}` | Detalle de servicio |
+| `/carrito` | Carrito (funciona sin sesión, vía `X-Cart-Token`) |
+| `/checkout` | Dirección → método de entrega → método de pago → confirmar |
+| `/pedido/{numero}` | Confirmación del pedido creado |
+
+Login/registro están en un modal accesible desde el botón del header en cualquier página (`frontend/js/components/layout.js`). Es HTML/CSS/JS plano sin build step (sección 39: "librerías JS solo cuando aporten valor real"); todas las rutas amigables se resuelven en el `.htaccess` de la raíz hacia los archivos estáticos de `frontend/pages/`.
 
 ## API
 
@@ -122,6 +138,7 @@ Las rutas marcadas con 🔒 requieren `Authorization: Bearer <token>` (JWT obten
 | DELETE | `/api/cart` | Vaciar carrito. |
 | POST 🔒 | `/api/checkout` | `{ address_id, payment_method_id, delivery_method, notes? }` → crea el pedido. |
 | GET 🔒 | `/api/orders/{orderNumber}` | Confirmación/detalle del pedido (solo el dueño; 404 si no es suyo). |
+| GET | `/api/payment-methods` | Métodos de pago habilitados (para que el checkout sepa qué mostrar). |
 
 `stock_status` se calcula en cada respuesta: `agotado` (stock ≤ 0), `ultimas_unidades` (stock ≤ `min_stock`) o `disponible`. `sort` en productos/servicios acepta `relevancia` (por defecto cuando hay `search`, usa `FULLTEXT`/`MATCH...AGAINST`), `price_asc`, `price_desc`, `name`, `rating` y `best_selling` (este último cae a "más recientes" hasta que exista el módulo de pedidos en la Fase 6).
 
@@ -133,7 +150,9 @@ Los endpoints de inventario/gestión de pedidos se agregan en la Fase 6.
 
 ## Swagger / OpenAPI
 
-Se documentará a partir de que existan los primeros endpoints de negocio (Fase 2 en adelante).
+Documentación interactiva en `http://localhost/proyectos/castamotos/api-docs/` (Swagger UI vía CDN, sin dependencias nuevas de Composer). El spec vive en `api-docs/openapi.json` (OpenAPI 3.0.3) y cubre los ~57 endpoints reales de las Fases 1-5, con esquemas compartidos (`Product`, `Service`, `Address`, `Order`, `Cart`, etc.) y seguridad `bearerAuth` (JWT) donde aplica. Como comparte origen con la API, se puede usar "Try it out" contra el backend real: iniciar sesión en `POST /auth/login`, copiar el `token` de la respuesta y pegarlo en el botón **Authorize** (arriba a la derecha) como `Bearer <token>`.
+
+Al agregar endpoints en las próximas fases, actualizar `api-docs/openapi.json` en el mismo cambio (no queda generado automáticamente desde el código todavía).
 
 ## Testing
 
@@ -194,7 +213,16 @@ Antes de desplegar a producción:
   /tests         Pruebas (PHPUnit)
 
 /frontend
-  /assets, /css, /js, /components, /pages, /services, /utils, /views
+  /assets/img    Logo y estáticos
+  /css/main.css  Sistema de diseño (negro/amarillo, responsive)
+  /js
+    /services    apiService (fetch + JWT + X-Cart-Token), authService, catalogService, cartService
+    /components  layout (header/nav/modal login/footer), cards (ProductCard/ServiceCard)
+    /utils       helpers (moneda, query params, toasts)
+    /pages       un script por página (home, productos, producto, servicios, servicio, carrito, checkout, pedido)
+  /pages         productos.html, producto.html, servicios.html, servicio.html, carrito.html, checkout.html, pedido.html
+
+/api-docs        Swagger UI + openapi.json (estático, fuera del prefijo /api/)
 
 /docs            Documentación técnica (ARCHITECTURE.md)
 ```

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Servicios — CASTAMOTO</title>
+<base href="/proyectos/castamotos/">
+<link rel="stylesheet" href="frontend/css/main.css">
+</head>
+<body>
+
+<div id="app-header"></div>
+
+<main class="container">
+  <h1 class="section__title mt-16">Servicios</h1>
+
+  <form id="service-filter-form" class="filters-bar">
+    <select id="filter-service-category" aria-label="Categoría"><option value="">Todas las categorías</option></select>
+    <input id="filter-service-location" class="form-control" placeholder="Ciudad / ubicación" style="max-width:200px;">
+    <input id="filter-service-search" class="form-control" type="search" placeholder="Buscar servicios..." style="flex:1;min-width:200px;">
+    <button class="btn btn-secondary" type="submit">Buscar</button>
+  </form>
+
+  <div id="services-results"><p class="loading-state">Cargando servicios…</p></div>
+</main>
+
+<div id="app-footer"></div>
+
+<script src="frontend/js/utils/helpers.js"></script>
+<script src="frontend/js/services/apiService.js"></script>
+<script src="frontend/js/services/authService.js"></script>
+<script src="frontend/js/services/catalogService.js"></script>
+<script src="frontend/js/services/cartService.js"></script>
+<script src="frontend/js/components/layout.js"></script>
+<script src="frontend/js/components/cards.js"></script>
+<script src="frontend/js/pages/servicios.js"></script>
+</body>
+</html>

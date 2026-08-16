@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>CASTAMOTO — Documentación de la API</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+<style>
+  body { margin: 0; background: #0d0d0d; }
+  .topbar { background: #0d0d0d !important; border-bottom: 2px solid #f4c430; }
+  .swagger-ui .topbar { display: none; } /* usamos nuestra propia franja de marca abajo */
+  .castamoto-bar {
+    background: #0d0d0d; color: #f4c430; padding: 14px 20px; font-family: Arial, sans-serif;
+    font-weight: 800; font-size: 1.1rem; border-bottom: 2px solid #f4c430;
+  }
+</style>
+</head>
+<body>
+<div class="castamoto-bar">CASTAMOTO — API Docs</div>
+<div id="swagger-ui"></div>
+
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+  window.onload = () => {
+    window.ui = SwaggerUIBundle({
+      url: './openapi.json',
+      dom_id: '#swagger-ui',
+      presets: [SwaggerUIBundle.presets.apis],
+      layout: 'BaseLayout',
+      deepLinking: true,
+    });
+  };
+</script>
+</body>
+</html>

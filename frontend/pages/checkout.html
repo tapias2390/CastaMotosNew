@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout — CASTAMOTO</title>
+<base href="/proyectos/castamotos/">
+<link rel="stylesheet" href="frontend/css/main.css">
+</head>
+<body>
+
+<div id="app-header"></div>
+
+<main class="container">
+  <h1 class="section__title mt-16">Checkout</h1>
+  <div class="step-list">
+    <span>1. Carrito</span><span class="is-active">2. Dirección</span><span class="is-active">3. Entrega</span>
+    <span class="is-active">4. Pago</span><span class="is-active">5. Confirmación</span>
+  </div>
+
+  <div id="checkout-mount">
+    <div class="detail-grid">
+      <div>
+        <h2 class="section__title" style="font-size:1.1rem;">Dirección de entrega</h2>
+        <div id="address-list"></div>
+
+        <form id="new-address-form" class="mt-16">
+          <h3 style="font-size:0.95rem;color:var(--gris-texto);">Agregar nueva dirección</h3>
+          <div class="form-row">
+            <div class="form-group"><label for="addr-recipient">Nombre de quien recibe</label><input class="form-control" id="addr-recipient" required></div>
+            <div class="form-group"><label for="addr-phone">Teléfono</label><input class="form-control" id="addr-phone" required></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label for="addr-country">País</label><input class="form-control" id="addr-country" value="Colombia" required></div>
+            <div class="form-group"><label for="addr-state">Departamento</label><input class="form-control" id="addr-state" required></div>
+            <div class="form-group"><label for="addr-city">Ciudad</label><input class="form-control" id="addr-city" required></div>
+          </div>
+          <div class="form-group"><label for="addr-line">Dirección</label><input class="form-control" id="addr-line" required></div>
+          <div class="form-group"><label for="addr-complement">Complemento (opcional)</label><input class="form-control" id="addr-complement"></div>
+          <div class="form-error" id="new-address-error"></div>
+          <button class="btn btn-secondary" type="submit">Guardar dirección</button>
+        </form>
+
+        <h2 class="section__title mt-16" style="font-size:1.1rem;">Método de entrega</h2>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <input type="radio" name="delivery_method" value="domicilio" checked style="width:auto;"> Entrega a domicilio
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;">
+          <input type="radio" name="delivery_method" value="recogida_tienda" style="width:auto;"> Recogida en tienda
+        </label>
+
+        <h2 class="section__title mt-16" style="font-size:1.1rem;">Método de pago</h2>
+        <div id="payment-method-list"></div>
+
+        <div class="form-group mt-16">
+          <label for="order-notes">Notas del pedido (opcional)</label>
+          <textarea class="form-control" id="order-notes" rows="2"></textarea>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="section__title" style="font-size:1.1rem;">Resumen</h2>
+        <div id="checkout-summary"></div>
+        <div class="form-error mt-16" id="checkout-error"></div>
+        <button class="btn btn-primary btn-block mt-16" id="confirm-order-btn">Confirmar pedido</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="app-footer"></div>
+
+<script src="frontend/js/utils/helpers.js"></script>
+<script src="frontend/js/services/apiService.js"></script>
+<script src="frontend/js/services/authService.js"></script>
+<script src="frontend/js/services/catalogService.js"></script>
+<script src="frontend/js/services/cartService.js"></script>
+<script src="frontend/js/components/layout.js"></script>
+<script src="frontend/js/pages/checkout.js"></script>
+</body>
+</html>

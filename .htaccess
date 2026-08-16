@@ -8,4 +8,16 @@ Options -Indexes
     # __route, así el backend no necesita adivinar el "base path" del despliegue
     # (funciona igual en /proyectos/castamotos/ que en un futuro vhost dedicado).
     RewriteRule ^api/(.*)$ backend/public/index.php?__route=api/$1 [L,QSA]
+
+    # URLs amigables del frontend (sección 31), consistentes con "canonical_url"
+    # que ya devuelve la API desde la Fase 4. Van antes que nada más porque son
+    # más específicas; no interfieren con /api/* (ya resuelto arriba con [L]).
+    RewriteRule ^producto/([^/]+)/?$ frontend/pages/producto.html?slug=$1 [L,QSA]
+    RewriteRule ^servicio/([^/]+)/?$ frontend/pages/servicio.html?slug=$1 [L,QSA]
+    RewriteRule ^categoria/([^/]+)/?$ frontend/pages/productos.html?category=$1 [L,QSA]
+    RewriteRule ^pedido/([^/]+)/?$ frontend/pages/pedido.html?number=$1 [L,QSA]
+    RewriteRule ^productos/?$ frontend/pages/productos.html [L,QSA]
+    RewriteRule ^servicios/?$ frontend/pages/servicios.html [L,QSA]
+    RewriteRule ^carrito/?$ frontend/pages/carrito.html [L,QSA]
+    RewriteRule ^checkout/?$ frontend/pages/checkout.html [L,QSA]
 </IfModule>
