@@ -22,6 +22,16 @@ return [
         'ttl' => (int) ($_ENV['JWT_TTL'] ?? 3600),
     ],
 
+    'auth' => [
+        // Fuerza bruta (sección 6): intentos fallidos permitidos antes de bloquear el login.
+        'max_login_attempts' => (int) ($_ENV['AUTH_MAX_LOGIN_ATTEMPTS'] ?? 5),
+        'lockout_minutes' => (int) ($_ENV['AUTH_LOCKOUT_MINUTES'] ?? 15),
+        // TTL del JWT cuando el usuario marca "recordar sesión" (sección 7).
+        'remember_ttl_days' => (int) ($_ENV['AUTH_REMEMBER_TTL_DAYS'] ?? 30),
+        'email_verification_ttl_hours' => (int) ($_ENV['EMAIL_VERIFICATION_TTL_HOURS'] ?? 24),
+        'password_reset_ttl_minutes' => (int) ($_ENV['PASSWORD_RESET_TTL_MINUTES'] ?? 60),
+    ],
+
     'mail' => [
         'host' => $_ENV['MAIL_HOST'] ?? '',
         'port' => (int) ($_ENV['MAIL_PORT'] ?? 587),
@@ -44,6 +54,28 @@ return [
 
     'push' => [
         'provider' => $_ENV['PUSH_PROVIDER'] ?? '',
+    ],
+
+    'cart' => [
+        'guest_token_bytes' => 20,
+    ],
+
+    'shipping' => [
+        // Tarifa plana provisional (sección 51: integración real con transportadoras
+        // queda para más adelante). Se ignora si delivery_method = 'recogida_tienda'.
+        'flat_rate' => (float) ($_ENV['SHIPPING_FLAT_RATE'] ?? 12000),
+        'free_threshold' => (float) ($_ENV['SHIPPING_FREE_THRESHOLD'] ?? 300000),
+    ],
+
+    'uploads' => [
+        // Validación de subida de archivos (sección 44): extensión, MIME y tamaño.
+        'avatar_max_size_kb' => (int) ($_ENV['AVATAR_MAX_SIZE_KB'] ?? 2048),
+        'avatar_allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp'],
+        'avatar_allowed_extensions' => ['jpg', 'jpeg', 'png', 'webp'],
+
+        'catalog_image_max_size_kb' => (int) ($_ENV['CATALOG_IMAGE_MAX_SIZE_KB'] ?? 4096),
+        'catalog_image_allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp'],
+        'catalog_image_allowed_extensions' => ['jpg', 'jpeg', 'png', 'webp'],
     ],
 
     'admin' => [

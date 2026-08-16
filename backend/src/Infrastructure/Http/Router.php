@@ -14,32 +14,36 @@ final class Router
 {
     private array $routes = [];
 
-    public function get(string $pattern, callable|array $handler): void
+    /**
+     * @param Middleware[] $middleware Se ejecutan en orden antes del handler.
+     */
+    public function get(string $pattern, callable|array $handler, array $middleware = []): void
     {
-        $this->add('GET', $pattern, $handler);
+        $this->add('GET', $pattern, $handler, $middleware);
     }
 
-    public function post(string $pattern, callable|array $handler): void
+    public function post(string $pattern, callable|array $handler, array $middleware = []): void
     {
-        $this->add('POST', $pattern, $handler);
+        $this->add('POST', $pattern, $handler, $middleware);
     }
 
-    public function put(string $pattern, callable|array $handler): void
+    public function put(string $pattern, callable|array $handler, array $middleware = []): void
     {
-        $this->add('PUT', $pattern, $handler);
+        $this->add('PUT', $pattern, $handler, $middleware);
     }
 
-    public function delete(string $pattern, callable|array $handler): void
+    public function delete(string $pattern, callable|array $handler, array $middleware = []): void
     {
-        $this->add('DELETE', $pattern, $handler);
+        $this->add('DELETE', $pattern, $handler, $middleware);
     }
 
-    private function add(string $method, string $pattern, callable|array $handler): void
+    private function add(string $method, string $pattern, callable|array $handler, array $middleware): void
     {
         $this->routes[] = [
             'method' => $method,
             'pattern' => trim($pattern, '/'),
             'handler' => $handler,
+            'middleware' => $middleware,
         ];
     }
 
@@ -56,6 +60,10 @@ final class Router
             $params = $this->match($route['pattern'], $path);
             if ($params === null) {
                 continue;
+            }
+
+            foreach ($route['middleware'] as $middleware) {
+                $request = $middleware->handle($request);
             }
 
             $handler = $route['handler'];

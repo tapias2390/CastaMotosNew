@@ -1,0 +1,185 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Presentation\Controllers;
+
+use App\Application\Support\AccessChecker;
+use App\Application\UseCases\Catalog\CreateProductUseCase;
+use App\Application\UseCases\Catalog\SyncProductAttributesUseCase;
+use App\Application\UseCases\Catalog\SyncProductVariantsUseCase;
+use App\Application\UseCases\Catalog\UpdateProductUseCase;
+use App\Application\UseCases\Catalog\UploadProductImageUseCase;
+use App\Application\Validation\Validator;
+use App\Domain\Entities\User;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ValidationException;
+use App\Infrastructure\Config\Config;
+use App\Infrastructure\Database\Connection;
+use App\Infrastructure\Http\Request;
+use App\Infrastructure\Http\Response;
+use App\Infrastructure\Persistence\PdoBrandRepository;
+use App\Infrastructure\Persistence\PdoCategoryRepository;
+use App\Infrastructure\Persistence\PdoFavoriteRepository;
+use App\Infrastructure\Persistence\PdoProductRepository;
+use App\Infrastructure\Persistence\PdoUserRepository;
+
+final class ProductController
+{
+    private PdoProductRepository $products;
+    private PdoCategoryRepository $categories;
+    private PdoBrandRepository $brands;
+    private PdoUserRepository $users;
+    private PdoFavoriteRepository $favorites;
+
+    private const RULES = [
+        'name' => 'required|max:200',
+        'category_id' => 'required|integer',
+        'brand_id' => 'integer',
+        'short_description' => 'max:500',
+        'sku' => 'required|max:100',
+        'internal_code' => 'max:100',
+        'price' => 'required|numeric|gte:0',
+        'previous_price' => 'numeric|gte:0',
+        'discount_percentage' => 'numeric|gte:0',
+        'tax_rate' => 'numeric|gte:0',
+        'stock' => 'required|integer|gte:0',
+        'min_stock' => 'integer|gte:0',
+        'weight' => 'numeric|gte:0',
+        'dimensions' => 'max:100',
+        'warranty' => 'max:150',
+        'status' => 'in:draft,active,inactive,out_of_stock',
+    ];
+
+    public function __construct()
+    {
+        $connection = Connection::get();
+        $this->products = new PdoProductRepository($connection);
+        $this->categories = new PdoCategoryRepository($connection);
+        $this->brands = new PdoBrandRepository($connection);
+        $this->users = new PdoUserRepository($connection);
+        $this->favorites = new PdoFavoriteRepository($connection);
+    }
+
+    public function index(Request $request): void
+    {
+        $filters = $request->query();
+        $result = $this->products->paginate($filters, $this->canManage($request));
+
+        Response::success($result);
+    }
+
+    public function show(Request $request, string $slug): void
+    {
+        $product = $this->products->findBySlug($slug, $this->canManage($request));
+        if ($product === null) {
+            throw new NotFoundException('Producto no encontrado.');
+        }
+
+        $product['related'] = $this->products->relatedProducts((int) $product['id'], (int) $product['category_id']);
+
+        // Compartir (sección 17): URL amigable y estable para armar enlaces de
+        // WhatsApp/Facebook/X/Telegram/Web Share API desde el frontend.
+        $product['canonical_url'] = rtrim((string) Config::get('app.url'), '/') . '/producto/' . $product['slug'];
+
+        /** @var User|null $user */
+        $user = $request->attribute('auth_user');
+        $product['is_favorite'] = $user !== null
+            ? $this->favorites->isFavorite($user->id, 'product', (int) $product['id'])
+            : false;
+
+        Response::success($product);
+    }
+
+    public function store(Request $request): void
+    {
+        $data = Validator::make($request->input(), self::RULES)->validate();
+
+        $id = (new CreateProductUseCase($this->products, $this->categories, $this->brands))->handle($data);
+
+        Response::success($this->products->find($id), 'Producto creado correctamente.', 201);
+    }
+
+    public function update(Request $request, string $id): void
+    {
+        $data = Validator::make($request->input(), self::RULES)->validate();
+
+        (new UpdateProductUseCase($this->products, $this->categories, $this->brands))->handle((int) $id, $data);
+
+        Response::success($this->products->find((int) $id), 'Producto actualizado correctamente.');
+    }
+
+    public function destroy(Request $request, string $id): void
+    {
+        if (!$this->products->exists((int) $id)) {
+            throw new NotFoundException('Producto no encontrado.');
+        }
+
+        $this->products->delete((int) $id);
+
+        Response::success(null, 'Producto eliminado correctamente.');
+    }
+
+    public function uploadImage(Request $request, string $id): void
+    {
+        $file = $request->file('image');
+        if ($file === null) {
+            throw new ValidationException('No fue posible subir la imagen.', [
+                'image' => ['Debes adjuntar un archivo con el campo "image".'],
+            ]);
+        }
+
+        $isPrimary = (bool) $request->input('is_primary', false);
+        $image = (new UploadProductImageUseCase($this->products))->handle((int) $id, $file, $isPrimary);
+
+        Response::success($image, 'Imagen agregada correctamente.', 201);
+    }
+
+    public function deleteImage(Request $request, string $id, string $imageId): void
+    {
+        if (!$this->products->imageBelongsToProduct((int) $imageId, (int) $id)) {
+            throw new NotFoundException('Imagen no encontrada.');
+        }
+
+        $this->products->deleteImage((int) $imageId);
+
+        Response::success(null, 'Imagen eliminada correctamente.');
+    }
+
+    public function setPrimaryImage(Request $request, string $id, string $imageId): void
+    {
+        if (!$this->products->imageBelongsToProduct((int) $imageId, (int) $id)) {
+            throw new NotFoundException('Imagen no encontrada.');
+        }
+
+        $this->products->setPrimaryImage((int) $id, (int) $imageId);
+
+        Response::success(null, 'Imagen marcada como principal.');
+    }
+
+    public function syncVariants(Request $request, string $id): void
+    {
+        $variants = $request->input('variants', []);
+
+        (new SyncProductVariantsUseCase($this->products))->handle((int) $id, is_array($variants) ? $variants : []);
+
+        Response::success($this->products->find((int) $id), 'Variantes actualizadas correctamente.');
+    }
+
+    public function syncAttributes(Request $request, string $id): void
+    {
+        $attributes = $request->input('attributes', []);
+
+        (new SyncProductAttributesUseCase($this->products))->handle((int) $id, is_array($attributes) ? $attributes : []);
+
+        Response::success($this->products->find((int) $id), 'Atributos actualizados correctamente.');
+    }
+
+    private function canManage(Request $request): bool
+    {
+        /** @var User|null $user */
+        $user = $request->attribute('auth_user');
+
+        return AccessChecker::can($user, 'manage-products', $this->users);
+    }
+}

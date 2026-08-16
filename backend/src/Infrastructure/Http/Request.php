@@ -15,14 +15,27 @@ final class Request
     private array $query;
     private array $body;
     private array $headers;
+    private array $files;
 
-    public function __construct(string $method, string $path, array $query, array $body, array $headers)
-    {
+    /** Bag de atributos que el middleware puede adjuntar (ej. el usuario autenticado). */
+    private array $attributes;
+
+    public function __construct(
+        string $method,
+        string $path,
+        array $query,
+        array $body,
+        array $headers,
+        array $files = [],
+        array $attributes = []
+    ) {
         $this->method = $method;
         $this->path = $path;
         $this->query = $query;
         $this->body = $body;
         $this->headers = $headers;
+        $this->files = $files;
+        $this->attributes = $attributes;
     }
 
     public static function fromGlobals(): self
@@ -48,7 +61,29 @@ final class Request
 
         $headers = function_exists('getallheaders') ? (getallheaders() ?: []) : [];
 
-        return new self($method, $path, $query, $body, $headers);
+        return new self($method, $path, $query, $body, $headers, $_FILES);
+    }
+
+    /**
+     * Devuelve una copia del request con un atributo adicional (inmutable a
+     * propósito: el middleware no debe mutar el request en el que corren otros).
+     */
+    public function withAttribute(string $key, mixed $value): self
+    {
+        $clone = clone $this;
+        $clone->attributes[$key] = $value;
+
+        return $clone;
+    }
+
+    public function attribute(string $key, mixed $default = null): mixed
+    {
+        return $this->attributes[$key] ?? $default;
+    }
+
+    public function file(string $key): ?array
+    {
+        return $this->files[$key] ?? null;
     }
 
     public function method(): string

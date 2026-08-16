@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Repositories;
+
+use App\Domain\Entities\User;
+
+/**
+ * Puerto (hexagonal) para la persistencia de usuarios. La implementación
+ * concreta (PDO) vive en Infrastructure/Persistence/PdoUserRepository.
+ */
+interface UserRepositoryInterface
+{
+    public function findById(int $id): ?User;
+
+    public function findByEmail(string $email): ?User;
+
+    public function emailExists(string $email): bool;
+
+    /**
+     * Crea el usuario y le asigna el rol "cliente" por defecto. Devuelve el id creado.
+     */
+    public function create(array $data): int;
+
+    public function updateProfile(int $userId, array $data): void;
+
+    public function updatePassword(int $userId, string $passwordHash): void;
+
+    public function updateAvatar(int $userId, string $avatarPath): void;
+
+    public function markEmailVerified(int $userId): void;
+
+    public function setEmailVerificationToken(int $userId, string $tokenHash, string $expiresAt): void;
+
+    public function findByEmailVerificationToken(string $tokenHash): ?User;
+
+    public function registerLoginSuccess(int $userId): void;
+
+    public function registerLoginFailure(int $userId, int $maxAttempts, int $lockoutMinutes): void;
+
+    /**
+     * @return string[] Nombres de los permisos que tiene el usuario a través de sus roles.
+     */
+    public function permissionsForUser(int $userId): array;
+}

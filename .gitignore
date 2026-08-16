@@ -9,6 +9,7 @@ backend/.env
 # Logs y almacenamiento
 backend/storage/logs/*.log
 backend/storage/uploads/*
+backend/storage/mails/*
 
 # IDE / OS
 .vscode/

@@ -38,6 +38,10 @@ final class Config
             self::$items[$key] = require $file;
         }
 
+        // Se expone la ruta raíz del backend (útil para módulos que leen/escriben
+        // en /storage, como la subida de avatares o el driver "log" de Mailer).
+        self::$items['app']['base_path'] = $basePath;
+
         self::$booted = true;
     }
 
