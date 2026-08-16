@@ -1,0 +1,98 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * CLI de utilidades del proyecto. Uso:
+ *   php bin/console migrate            Ejecuta las migraciones pendientes.
+ *   php bin/console migrate:rollback   Revierte el último batch de migraciones.
+ *   php bin/console db:seed            Ejecuta los seeders (datos iniciales).
+ */
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+use App\Infrastructure\Config\Config;
+use App\Infrastructure\Database\Connection;
+use App\Infrastructure\Database\Migrator;
+use App\Infrastructure\Logging\Logger;
+
+$basePath = dirname(__DIR__);
+
+Config::boot($basePath);
+Logger::boot($basePath);
+
+$command = $argv[1] ?? null;
+
+function console_line(string $text): void
+{
+    fwrite(STDOUT, $text . PHP_EOL);
+}
+
+function console_error(string $text): void
+{
+    fwrite(STDERR, $text . PHP_EOL);
+}
+
+try {
+    switch ($command) {
+        case 'migrate':
+            $migrator = new Migrator(Connection::get(), $basePath . '/database/migrations');
+            $ran = $migrator->migrate();
+
+            if (empty($ran)) {
+                console_line('No hay migraciones pendientes.');
+                break;
+            }
+
+            console_line('Migraciones aplicadas:');
+            foreach ($ran as $file) {
+                console_line('  ✔ ' . $file);
+            }
+            break;
+
+        case 'migrate:rollback':
+            $migrator = new Migrator(Connection::get(), $basePath . '/database/migrations');
+            $rolledBack = $migrator->rollback();
+
+            if (empty($rolledBack)) {
+                console_line('No hay migraciones para revertir.');
+                break;
+            }
+
+            console_line('Migraciones revertidas:');
+            foreach ($rolledBack as $file) {
+                console_line('  ↩ ' . $file);
+            }
+            break;
+
+        case 'db:seed':
+            $connection = Connection::get();
+            $seedersPath = $basePath . '/database/seeders';
+            $files = glob($seedersPath . '/*.php') ?: [];
+            sort($files);
+
+            foreach ($files as $file) {
+                /** @var \App\Infrastructure\Database\Seeder $seeder */
+                $seeder = require $file;
+                $seeder->run($connection);
+                console_line('  ✔ ' . basename($file));
+            }
+
+            console_line('Seeders ejecutados correctamente.');
+            break;
+
+        default:
+            console_error('Comando no reconocido: ' . ($command ?? '(ninguno)'));
+            console_line('');
+            console_line('Comandos disponibles:');
+            console_line('  migrate             Ejecuta las migraciones pendientes.');
+            console_line('  migrate:rollback    Revierte el último batch de migraciones.');
+            console_line('  db:seed             Ejecuta los seeders (datos iniciales).');
+            exit(1);
+    }
+} catch (Throwable $e) {
+    console_error('Error: ' . $e->getMessage());
+    Logger::error('Fallo en comando CLI: ' . $command, ['message' => $e->getMessage()]);
+    exit(1);
+}

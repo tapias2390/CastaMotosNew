@@ -1,0 +1,11 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Toda petición api/* (relativa a esta carpeta) se enruta al front controller
+    # del backend. Se pasa la ruta completa (con el prefijo "api/") vía querystring
+    # __route, así el backend no necesita adivinar el "base path" del despliegue
+    # (funciona igual en /proyectos/castamotos/ que en un futuro vhost dedicado).
+    RewriteRule ^api/(.*)$ backend/public/index.php?__route=api/$1 [L,QSA]
+</IfModule>

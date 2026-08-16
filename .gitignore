@@ -1,0 +1,21 @@
+# Dependencias
+backend/vendor/
+frontend/node_modules/
+
+# Entorno
+backend/.env
+.env
+
+# Logs y almacenamiento
+backend/storage/logs/*.log
+backend/storage/uploads/*
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Testing
+backend/.phpunit.cache/
+backend/.phpunit.result.cache
