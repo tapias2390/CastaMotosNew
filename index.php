@@ -11,6 +11,7 @@
      cambiar si el despliegue cambia de subcarpeta (ver APP_URL en backend/.env). -->
 <base href="/proyectos/castamotos/">
 <link rel="stylesheet" href="frontend/css/main.css">
+<script src="frontend/js/theme-init.js"></script>
 </head>
 <body>
 
@@ -73,6 +74,7 @@
 <script src="frontend/js/services/authService.js"></script>
 <script src="frontend/js/services/catalogService.js"></script>
 <script src="frontend/js/services/cartService.js"></script>
+<script src="frontend/js/services/themeService.js"></script>
 <script src="frontend/js/components/layout.js"></script>
 <script src="frontend/js/components/cards.js"></script>
 <script src="frontend/js/pages/home.js"></script>

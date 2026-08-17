@@ -1,26 +1,39 @@
 /* CASTAMOTO — Sistema de diseño (sección 1 del prompt maestro: negro/amarillo,
-   bordes redondeados, sombras discretas, mobile-first, buen contraste). */
+   bordes redondeados, sombras discretas, mobile-first, buen contraste).
 
+   Modo claro/oscuro: la identidad de marca (--amarillo y derivados) y los dos
+   tokens de CONTRASTE FIJO (--negro para texto sobre amarillo/blanco, --fondo
+   para el fondo de página) no cambian de rol entre temas — lo que cambia es
+   la superficie (tarjetas, inputs, header), el borde y el texto secundario/
+   principal, redefinidos en el bloque [data-theme="light"] más abajo.
+   Por defecto el sitio es oscuro (el estilo que pide el prompt maestro);
+   el botón de tema (ver layout.js) guarda la preferencia del usuario en
+   localStorage y la aplica antes de pintar la página (ver theme-init.js). */
 :root {
+  /* Fijos: no cambian entre temas */
   --negro: #0d0d0d;
+  --amarillo: #f4c430;
+  --amarillo-oscuro: #d1a512;
+  --amarillo-suave: #fde9a8;
+  --exito: #2fb344;
+  --exito-fondo: rgba(47, 179, 68, 0.15);
+  --error: #e5484d;
+  --error-fondo: rgba(229, 72, 77, 0.15);
+
+  /* Variables por tema (valores por defecto = tema oscuro) */
+  --fondo: #0d0d0d;
   --negro-suave: #161616;
   --gris-oscuro: #1e1e1e;
   --gris-borde: #2c2c2c;
   --gris-borde-fuerte: #3a3a3a;
   --gris-texto: #b3b3b3;
   --gris-texto-tenue: #7a7a7a;
-  --amarillo: #f4c430;
-  --amarillo-oscuro: #d1a512;
-  --amarillo-suave: #fde9a8;
   --blanco: #ffffff;
-  --exito: #2fb344;
-  --exito-fondo: rgba(47, 179, 68, 0.15);
-  --error: #e5484d;
-  --error-fondo: rgba(229, 72, 77, 0.15);
   /* Superficie donde vive la FOTO del producto: más clara que el resto de la
      tarjeta (como el blanco de estudio de fotografía de un marketplace real)
-     para que la imagen destaque en vez de fundirse con el fondo oscuro. */
+     para que la imagen destaque en vez de fundirse con el fondo de la tarjeta. */
   --superficie-imagen: #232323;
+
   --radio: 10px;
   --radio-sm: 6px;
   --radio-lg: 14px;
@@ -32,16 +45,35 @@
   --header-height: 68px;
 }
 
+/* Tema claro: mismo negro/amarillo de marca, superficies e inversión de texto
+   claras. --negro se mantiene fijo (sigue siendo el texto sobre amarillo/blanco). */
+[data-theme="light"] {
+  --fondo: #f7f6f3;
+  --negro-suave: #eeece6;
+  --gris-oscuro: #ffffff;
+  --gris-borde: #e0ddd3;
+  --gris-borde-fuerte: #c9c5b8;
+  --gris-texto: #5b5a54;
+  --gris-texto-tenue: #8a8880;
+  --blanco: #14130f;
+  --superficie-imagen: #f1efe8;
+  --sombra: 0 4px 16px rgba(20, 19, 15, 0.1);
+  --sombra-card: 0 1px 3px rgba(20, 19, 15, 0.12);
+  --sombra-card-hover: 0 12px 28px rgba(20, 19, 15, 0.16);
+  --sombra-header: 0 2px 12px rgba(20, 19, 15, 0.1);
+}
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
   font-family: var(--fuente);
-  background: var(--negro);
+  background: var(--fondo);
   color: var(--blanco);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -61,7 +93,7 @@ input, select, textarea { font-family: inherit; }
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--negro);
+  background: var(--fondo);
   border-bottom: 2px solid var(--amarillo);
   box-shadow: var(--sombra-header);
 }
@@ -94,7 +126,10 @@ input, select, textarea { font-family: inherit; }
   display: flex;
   border-radius: 999px;
   overflow: hidden;
-  background: var(--blanco);
+  /* Blanco fijo a propósito (no var(--blanco), que en tema claro pasa a ser
+     texto oscuro): la barra de búsqueda siempre necesita alto contraste con
+     texto oscuro encima, en los dos temas. */
+  background: #ffffff;
   box-shadow: inset 0 0 0 1px var(--gris-borde);
 }
 .site-header__search input {
@@ -238,7 +273,7 @@ input, select, textarea { font-family: inherit; }
 }
 
 .hero {
-  background: linear-gradient(135deg, var(--negro-suave), var(--negro) 70%);
+  background: linear-gradient(135deg, var(--negro-suave), var(--fondo) 70%);
   border-bottom: 1px solid var(--gris-borde);
   padding: 48px 0;
   text-align: center;
@@ -347,7 +382,10 @@ input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--blanco);
+  /* Blanco fijo (no var(--blanco)): flota sobre la FOTO del producto con un
+     fondo oscuro también fijo, no sobre el fondo de la página — debe seguir
+     siendo legible igual en los dos temas. */
+  color: #ffffff;
   transition: transform 0.15s ease, color 0.15s ease;
 }
 .card__favorite:hover { transform: scale(1.1); }
@@ -432,7 +470,8 @@ input, select, textarea { font-family: inherit; }
 .admin-image-list__item img { width: 100%; height: 100%; object-fit: cover; }
 .admin-image-list__remove {
   position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 999px;
-  background: rgba(13, 13, 13, 0.75); color: var(--blanco); border: none; font-size: 0.7rem; line-height: 1; cursor: pointer;
+  /* Blanco fijo: mismo motivo que .card__favorite — flota sobre una foto miniatura. */
+  background: rgba(13, 13, 13, 0.75); color: #ffffff; border: none; font-size: 0.7rem; line-height: 1; cursor: pointer;
 }
 
 /* --- Toast --- */
@@ -565,7 +604,13 @@ input, select, textarea { font-family: inherit; }
 .carousel .card { flex: 0 0 200px; scroll-snap-align: start; }
 .carousel::-webkit-scrollbar { height: 8px; }
 .carousel::-webkit-scrollbar-thumb { background: var(--gris-borde); border-radius: 999px; }
+
+/* La galería necesita position:relative como ancla para el panel de zoom
+   (que se posiciona a su derecha) — ver .gallery-zoom-panel más abajo. */
+.detail-gallery { position: relative; }
+
 .detail-gallery__main {
+  position: relative;
   aspect-ratio: 1 / 1;
   background: var(--superficie-imagen);
   border-radius: var(--radio-lg);
@@ -587,13 +632,89 @@ input, select, textarea { font-family: inherit; }
 .detail-gallery__thumbs img.is-active { border-color: var(--amarillo); }
 
 /* Giro 360° a partir de las fotos reales del producto/servicio (ver gallery360.js) */
-.detail-gallery__main.is-360 { position: relative; cursor: grab; user-select: none; touch-action: pan-y; }
+.detail-gallery__main.is-360 { cursor: grab; user-select: none; touch-action: pan-y; }
 .detail-gallery__main.is-360.is-dragging { cursor: grabbing; }
 .detail-gallery__main.is-360 img { pointer-events: none; }
 .gallery-360-hint {
   position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-  background: rgba(13, 13, 13, 0.7); color: var(--blanco); font-size: 0.72rem;
+  /* Blanco fijo: mismo motivo que .card__favorite — flota sobre la foto del producto. */
+  background: rgba(13, 13, 13, 0.7); color: #ffffff; font-size: 0.72rem;
   padding: 4px 10px; border-radius: 999px; pointer-events: none;
+}
+
+/* Zoom al pasar el mouse (funcionalidad típica de marketplace grande, sección
+   1: se replica el comportamiento, no el diseño de un tercero) — lupa sobre
+   la foto + panel ampliado a la derecha. Solo en dispositivos con mouse real
+   (ver "canHoverZoom" en gallery360.js); en táctil, el equivalente es el
+   click/tap que abre pantalla completa (.gallery-lightbox-overlay). */
+.detail-gallery__main.is-zoomable:not(.is-360) { cursor: zoom-in; }
+
+.gallery-zoom-lens {
+  position: absolute;
+  border: 2px solid var(--amarillo);
+  background: rgba(244, 196, 48, 0.15);
+  pointer-events: none;
+  display: none;
+}
+/* La lupa solo tiene sentido junto al panel ampliado — mismo punto de corte
+   de ancho que .gallery-zoom-panel, para no mostrar un recuadro "vacío". */
+@media (min-width: 1200px) {
+  .gallery-zoom-lens.is-visible { display: block; }
+}
+
+.gallery-zoom-panel {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: calc(100% + 16px);
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-color: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-card-hover);
+  z-index: 60;
+  pointer-events: none;
+}
+/* Solo hay espacio real a la derecha de la galería en pantallas anchas
+   (el grid de detalle pasa a 2 columnas desde 800px, ver .detail-grid);
+   1200px = el ancho máximo de .container, para que el panel nunca se salga
+   del viewport aunque la ventana sea más angosta que ese máximo. */
+@media (min-width: 1200px) {
+  .gallery-zoom-panel.is-visible { display: block; }
+}
+
+.gallery-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 13, 13, 0.92);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+}
+.gallery-lightbox-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  border-radius: var(--radio);
+  margin: auto;
+}
+.gallery-lightbox-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  background: rgba(13, 13, 13, 0.75);
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+  cursor: pointer;
 }
 
 .share-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }

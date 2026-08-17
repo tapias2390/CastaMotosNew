@@ -15,6 +15,19 @@ const catalogService = {
   products: (filters = {}) => apiService.get('/products' + toQueryString(filters)),
   product: (slug) => apiService.get(`/products/${encodeURIComponent(slug)}`),
 
+  // Gestión de productos (panel admin) — requiere permiso manage-products.
+  createProduct: (payload) => apiService.post('/products', payload),
+  updateProduct: (id, payload) => apiService.put(`/products/${id}`, payload),
+  deleteProduct: (id) => apiService.del(`/products/${id}`),
+  uploadProductImage: (id, file, isPrimary = false) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (isPrimary) formData.append('is_primary', '1');
+    return apiService.post(`/products/${id}/images`, formData, { isFormData: true });
+  },
+  deleteProductImage: (productId, imageId) => apiService.del(`/products/${productId}/images/${imageId}`),
+  setPrimaryProductImage: (productId, imageId) => apiService.put(`/products/${productId}/images/${imageId}/primary`),
+
   services: (filters = {}) => apiService.get('/services' + toQueryString(filters)),
   service: (slug) => apiService.get(`/services/${encodeURIComponent(slug)}`),
 

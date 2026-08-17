@@ -24,6 +24,7 @@ function wireTabs() {
       document.getElementById('admin-tab-orders').hidden = tab.dataset.tab !== 'orders';
       document.getElementById('admin-tab-inventory').hidden = tab.dataset.tab !== 'inventory';
       document.getElementById('admin-tab-services').hidden = tab.dataset.tab !== 'services';
+      document.getElementById('admin-tab-products').hidden = tab.dataset.tab !== 'products';
     });
   });
 }
@@ -361,6 +362,254 @@ function wireServiceManagement() {
   });
 }
 
+/**
+ * Gestión de productos (permiso manage-products) — mismo patrón que la
+ * gestión de servicios de arriba. El stock NO se edita aquí a propósito: se
+ * ajusta desde la pestaña "Inventario" (`adminService.adjustInventory`), que
+ * sí deja trazabilidad en `inventory_movements` (Fase 6) — permitir editarlo
+ * también desde este formulario rompería esa única fuente de verdad.
+ */
+async function populateProductSelects() {
+  const categorySelect = document.getElementById('product-category');
+  const brandSelect = document.getElementById('product-brand');
+
+  try {
+    const [categories, brands] = await Promise.all([catalogService.categories(), catalogService.brands()]);
+    const flatCategories = helpers.flattenCategories(categories);
+
+    categorySelect.innerHTML = '<option value="">Selecciona una categoría</option>' +
+      flatCategories.map((cat) => `<option value="${cat.id}">${helpers.escapeHtml(cat.name)}</option>`).join('');
+    brandSelect.innerHTML = '<option value="">Sin marca</option>' +
+      brands.map((brand) => `<option value="${brand.id}">${helpers.escapeHtml(brand.name)}</option>`).join('');
+  } catch (error) {
+    // El formulario sigue siendo usable sin categorías/marcas precargadas.
+  }
+}
+
+async function loadProductsAdmin() {
+  const body = document.getElementById('products-table-body');
+  const errorBox = document.getElementById('products-error');
+  errorBox.textContent = '';
+
+  try {
+    const result = await catalogService.products({ per_page: 50 });
+
+    if (result.data.length === 0) {
+      body.innerHTML = '<tr><td colspan="7">Todavía no hay productos creados.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = result.data.map((product) => `
+      <tr data-product-id="${product.id}" data-product-slug="${product.slug}">
+        <td>${helpers.escapeHtml(product.name)}</td>
+        <td>${helpers.escapeHtml(product.sku)}</td>
+        <td>${helpers.escapeHtml(product.category_name || '—')}</td>
+        <td>${helpers.formatCurrency(product.price)}</td>
+        <td>${product.stock}</td>
+        <td><span class="status-badge ${product.status === 'active' ? 'is-final-good' : ''}">${statusLabelEs(product.status)}</span></td>
+        <td>
+          <div class="flex gap-8">
+            <button class="btn btn-secondary" data-action="edit-product">Editar</button>
+            <button class="btn btn-secondary" data-action="delete-product">Eliminar</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('[data-action="edit-product"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const row = button.closest('tr');
+        openProductForm(row.dataset.productSlug);
+      });
+    });
+
+    body.querySelectorAll('[data-action="delete-product"]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const row = button.closest('tr');
+        if (!window.confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
+
+        try {
+          await catalogService.deleteProduct(row.dataset.productId);
+          helpers.toast('Producto eliminado.', 'success');
+          loadProductsAdmin();
+        } catch (error) {
+          helpers.toast(error.message, 'error');
+        }
+      });
+    });
+  } catch (error) {
+    handleAdminError(error, errorBox);
+  }
+}
+
+function renderProductImageThumb(productId, image) {
+  const list = document.getElementById('product-images-list');
+  const item = document.createElement('div');
+  item.className = 'admin-image-list__item';
+  item.dataset.imageId = image.id;
+  item.title = image.is_primary ? 'Foto principal' : 'Marcar como principal';
+  item.innerHTML = `
+    <img src="${helpers.mediaUrl('products', image.url)}" alt="Foto del producto" style="${image.is_primary ? 'outline:2px solid var(--amarillo);' : ''}">
+    <button type="button" class="admin-image-list__remove" aria-label="Eliminar foto">✕</button>
+  `;
+
+  item.querySelector('img').addEventListener('click', async () => {
+    try {
+      await catalogService.setPrimaryProductImage(productId, image.id);
+      document.querySelectorAll('#product-images-list img').forEach((img) => { img.style.outline = ''; });
+      item.querySelector('img').style.outline = '2px solid var(--amarillo)';
+    } catch (error) {
+      helpers.toast(error.message, 'error');
+    }
+  });
+
+  item.querySelector('.admin-image-list__remove').addEventListener('click', async () => {
+    try {
+      await catalogService.deleteProductImage(productId, image.id);
+      item.remove();
+    } catch (error) {
+      helpers.toast(error.message, 'error');
+    }
+  });
+
+  list.appendChild(item);
+}
+
+function resetProductForm() {
+  document.getElementById('product-form').reset();
+  document.getElementById('product-id').value = '';
+  document.getElementById('product-slug').value = '';
+  document.getElementById('product-images-list').innerHTML = '';
+  document.getElementById('product-images-section').hidden = true;
+  document.getElementById('product-stock').disabled = false;
+  document.getElementById('product-stock-hint').hidden = true;
+  document.getElementById('product-modal-title').textContent = 'Nuevo producto';
+  document.getElementById('product-submit-btn').textContent = 'Crear producto';
+  document.getElementById('product-form-error').textContent = '';
+}
+
+/** @param {string|null} slug - null para crear, slug del producto para editar. */
+async function openProductForm(slug) {
+  resetProductForm();
+  document.getElementById('product-modal-overlay').classList.add('is-open');
+
+  if (!slug) return;
+
+  try {
+    const product = await catalogService.product(slug);
+
+    document.getElementById('product-id').value = product.id;
+    document.getElementById('product-slug').value = product.slug;
+    document.getElementById('product-name').value = product.name;
+    document.getElementById('product-sku').value = product.sku;
+    document.getElementById('product-category').value = product.category_id || '';
+    document.getElementById('product-brand').value = product.brand_id || '';
+    document.getElementById('product-price').value = product.price;
+    document.getElementById('product-previous-price').value = product.previous_price || '';
+    document.getElementById('product-stock').value = product.stock;
+    document.getElementById('product-min-stock').value = product.min_stock || 0;
+    document.getElementById('product-short-description').value = product.short_description || '';
+    document.getElementById('product-status').value = product.status;
+
+    // El stock ya existe en inventario: se bloquea aquí a propósito (ver comentario arriba).
+    document.getElementById('product-stock').disabled = true;
+    document.getElementById('product-stock-hint').hidden = false;
+
+    document.getElementById('product-modal-title').textContent = 'Editar producto';
+    document.getElementById('product-submit-btn').textContent = 'Guardar cambios';
+
+    const imagesSection = document.getElementById('product-images-section');
+    imagesSection.hidden = false;
+    (product.images || []).forEach((image) => renderProductImageThumb(product.id, image));
+  } catch (error) {
+    helpers.toast(error.message, 'error');
+    closeProductForm();
+  }
+}
+
+function closeProductForm() {
+  document.getElementById('product-modal-overlay').classList.remove('is-open');
+}
+
+function productFormPayload() {
+  const isEditing = !!document.getElementById('product-id').value;
+
+  return {
+    name: document.getElementById('product-name').value.trim(),
+    sku: document.getElementById('product-sku').value.trim(),
+    category_id: document.getElementById('product-category').value,
+    brand_id: document.getElementById('product-brand').value || undefined,
+    price: document.getElementById('product-price').value,
+    previous_price: document.getElementById('product-previous-price').value || undefined,
+    // Al editar, el input está deshabilitado (readonly) — su .value sigue siendo
+    // el stock actual precargado, así que el campo "required" del backend se
+    // cumple sin permitir que este formulario lo cambie de verdad.
+    stock: document.getElementById('product-stock').value || (isEditing ? '0' : undefined),
+    min_stock: document.getElementById('product-min-stock').value || undefined,
+    short_description: document.getElementById('product-short-description').value.trim() || undefined,
+    status: document.getElementById('product-status').value,
+  };
+}
+
+function wireProductManagement() {
+  document.getElementById('new-product-btn').addEventListener('click', () => openProductForm(null));
+  document.getElementById('product-modal-close').addEventListener('click', closeProductForm);
+  document.getElementById('product-modal-overlay').addEventListener('click', (event) => {
+    if (event.target === document.getElementById('product-modal-overlay')) closeProductForm();
+  });
+
+  document.getElementById('product-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorBox = document.getElementById('product-form-error');
+    errorBox.textContent = '';
+
+    const id = document.getElementById('product-id').value;
+    const payload = productFormPayload();
+
+    try {
+      let product;
+      if (id) {
+        product = await catalogService.updateProduct(id, payload);
+        helpers.toast('Producto actualizado.', 'success');
+      } else {
+        product = await catalogService.createProduct(payload);
+        helpers.toast('Producto creado. Ahora puedes agregarle fotos.', 'success');
+      }
+
+      // Mismo criterio que servicios: tras crear, el formulario pasa a modo
+      // "edición" sin cerrarse, para poder subir fotos de inmediato.
+      document.getElementById('product-id').value = product.id;
+      document.getElementById('product-slug').value = product.slug;
+      document.getElementById('product-modal-title').textContent = 'Editar producto';
+      document.getElementById('product-submit-btn').textContent = 'Guardar cambios';
+      document.getElementById('product-stock').disabled = true;
+      document.getElementById('product-stock-hint').hidden = false;
+      document.getElementById('product-images-section').hidden = false;
+
+      loadProductsAdmin();
+    } catch (error) {
+      errorBox.textContent = helpers.flattenErrors(error.fields) || error.message;
+    }
+  });
+
+  document.getElementById('product-image-input').addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    const productId = document.getElementById('product-id').value;
+    if (!file || !productId) return;
+
+    const isFirstImage = document.getElementById('product-images-list').children.length === 0;
+
+    try {
+      const image = await catalogService.uploadProductImage(productId, file, isFirstImage);
+      renderProductImageThumb(productId, { ...image, is_primary: isFirstImage });
+    } catch (error) {
+      helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
+    } finally {
+      event.target.value = '';
+    }
+  });
+}
+
 function handleAdminError(error, errorBox) {
   if (error.status === 401 || error.status === 403) {
     errorBox.textContent = 'No tienes permisos para ver esta sección.';
@@ -377,6 +626,7 @@ async function initAdminPage() {
 
   wireTabs();
   wireServiceManagement();
+  wireProductManagement();
   document.getElementById('orders-status-filter').addEventListener('change', loadOrders);
   document.getElementById('inventory-filter-form').addEventListener('submit', (event) => {
     event.preventDefault();
@@ -387,6 +637,8 @@ async function initAdminPage() {
   loadInventory();
   populateServiceCategorySelect();
   loadServices();
+  populateProductSelects();
+  loadProductsAdmin();
 }
 
 document.addEventListener('DOMContentLoaded', initAdminPage);

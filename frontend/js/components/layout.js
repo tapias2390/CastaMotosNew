@@ -32,6 +32,9 @@ function renderHeaderShell() {
           </form>
         </div>
         <nav class="site-header__actions">
+          <button class="icon-btn" id="theme-toggle-btn" type="button" aria-label="${themeService.current() === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro'}">
+            ${themeService.current() === 'light' ? '☀️' : '🌙'}
+          </button>
           <a class="icon-btn" href="carrito" aria-label="Carrito">
             🛒<span class="badge-count" id="cart-badge" hidden>0</span>
           </a>
@@ -51,6 +54,13 @@ function renderHeaderShell() {
     </header>
     ${authModalMarkup()}
   `;
+
+  document.getElementById('theme-toggle-btn').addEventListener('click', () => {
+    const next = themeService.toggle();
+    const button = document.getElementById('theme-toggle-btn');
+    button.textContent = next === 'light' ? '☀️' : '🌙';
+    button.setAttribute('aria-label', next === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro');
+  });
 
   document.getElementById('header-search-form').addEventListener('submit', (event) => {
     event.preventDefault();
