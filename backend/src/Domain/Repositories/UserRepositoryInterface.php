@@ -53,4 +53,11 @@ interface UserRepositoryInterface
      * @return array{data: array, total: int, page: int, per_page: int}
      */
     public function paginateForAdmin(array $filters): array;
+
+    /**
+     * Reemplaza el/los rol(es) de un usuario por uno solo (sección 28: gestión
+     * de roles) — mismo modelo de "un rol por cuenta" que ya usa el registro
+     * (sección 7), aunque la tabla user_roles admita varios por diseño.
+     */
+    public function setRole(int $userId, string $roleName): void;
 }

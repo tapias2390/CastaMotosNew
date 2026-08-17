@@ -844,6 +844,22 @@ input, select, textarea { font-family: inherit; }
   padding: 20px;
   box-shadow: var(--sombra-card);
 }
+
+/* Cupón de descuento (sección 30) dentro del resumen del carrito/checkout. */
+.coupon-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--gris-borde);
+}
+.coupon-box input { flex: 1; }
+.coupon-box--applied {
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--exito);
+}
 .summary-row { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; color: var(--gris-texto); }
 .summary-row.total { color: var(--blanco); font-weight: 800; font-size: 1.1rem; border-top: 1px solid var(--gris-borde); padding-top: 10px; margin-top: 10px; }
 

@@ -46,6 +46,7 @@ const ADMIN_SECTIONS = {
   products: { title: 'Productos', hint: 'Crea, edita y elimina los productos publicados en el catálogo.' },
   brands: { title: 'Marcas', hint: 'Fabricantes/marcas de los productos (ej. AKT, Bajaj) — lo más parecido a "proveedores" en un marketplace, donde no se le compra inventario a terceros para revender.' },
   'payment-methods': { title: 'Métodos de pago', hint: 'Actívalos o desactívalos sin tocar código — el checkout refleja el cambio al instante.' },
+  coupons: { title: 'Cupones', hint: 'Códigos de descuento — porcentuales o fijos, con compra mínima, vigencia y límite de usos.' },
 };
 
 /** Barra lateral (fija en escritorio, cajón deslizable en pantallas angostas). */
@@ -72,7 +73,7 @@ function wireSidebar() {
       link.classList.add('is-active');
 
       const tab = link.dataset.tab;
-      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands', 'payment-methods'].forEach((name) => {
+      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands', 'payment-methods', 'coupons'].forEach((name) => {
         const section = document.getElementById(`admin-tab-${name}`);
         section.hidden = name !== tab;
         if (name === tab) {
@@ -1132,6 +1133,133 @@ function wirePaymentMethodManagement() {
   });
 }
 
+/** Cupones (sección 30, permiso manage-coupons). */
+async function loadCoupons() {
+  const body = document.getElementById('coupons-table-body');
+  const errorBox = document.getElementById('coupons-error');
+  errorBox.textContent = '';
+
+  try {
+    const result = await adminService.coupons({ per_page: 50 });
+
+    if (result.data.length === 0) {
+      body.innerHTML = '<tr><td colspan="8">Todavía no hay cupones creados.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = result.data.map((coupon) => {
+      const valueLabel = coupon.type === 'percentage' ? `${Number(coupon.value)}%` : helpers.formatCurrency(coupon.value);
+      const usage = coupon.usage_limit ? `${coupon.used_count} / ${coupon.usage_limit}` : `${coupon.used_count} (sin límite)`;
+      const vigencia = [coupon.starts_at, coupon.ends_at].some(Boolean)
+        ? `${coupon.starts_at ? new Date(coupon.starts_at).toLocaleDateString('es-CO') : '—'} a ${coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString('es-CO') : '—'}`
+        : 'Sin límite';
+
+      return `
+        <tr data-coupon-id="${coupon.id}">
+          <td><code>${helpers.escapeHtml(coupon.code)}</code></td>
+          <td>${coupon.type === 'percentage' ? 'Porcentaje' : 'Monto fijo'}</td>
+          <td>${valueLabel}</td>
+          <td>${coupon.min_purchase ? helpers.formatCurrency(coupon.min_purchase) : '—'}</td>
+          <td>${usage}</td>
+          <td style="font-size:0.78rem;">${vigencia}</td>
+          <td><span class="status-badge ${coupon.status === 'active' ? 'is-final-good' : ''}">${coupon.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+          <td>
+            <div class="flex gap-8">
+              <button class="btn btn-secondary" data-action="edit-coupon">Editar</button>
+              <button class="btn btn-secondary" data-action="delete-coupon">Eliminar</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    body.querySelectorAll('[data-action="edit-coupon"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const coupon = result.data.find((c) => c.id === Number(button.closest('tr').dataset.couponId));
+        openCouponForm(coupon);
+      });
+    });
+
+    body.querySelectorAll('[data-action="delete-coupon"]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.closest('tr').dataset.couponId;
+        if (!window.confirm('¿Eliminar este cupón? Esta acción no se puede deshacer.')) return;
+
+        try {
+          await adminService.deleteCoupon(id);
+          helpers.toast('Cupón eliminado.', 'success');
+          loadCoupons();
+        } catch (error) {
+          helpers.toast(error.message, 'error');
+        }
+      });
+    });
+  } catch (error) {
+    handleAdminError(error, errorBox);
+  }
+}
+
+function openCouponForm(coupon) {
+  document.getElementById('coupon-form-admin').reset();
+  document.getElementById('coupon-form-error').textContent = '';
+  document.getElementById('coupon-id').value = coupon ? coupon.id : '';
+  document.getElementById('coupon-code').value = coupon ? coupon.code : '';
+  document.getElementById('coupon-type').value = coupon ? coupon.type : 'percentage';
+  document.getElementById('coupon-value').value = coupon ? coupon.value : '';
+  document.getElementById('coupon-min-purchase').value = coupon && coupon.min_purchase ? coupon.min_purchase : '';
+  document.getElementById('coupon-usage-limit').value = coupon && coupon.usage_limit ? coupon.usage_limit : '';
+  document.getElementById('coupon-starts-at').value = coupon && coupon.starts_at ? coupon.starts_at.slice(0, 10) : '';
+  document.getElementById('coupon-ends-at').value = coupon && coupon.ends_at ? coupon.ends_at.slice(0, 10) : '';
+  document.getElementById('coupon-status').value = coupon ? coupon.status : 'active';
+  document.getElementById('coupon-modal-title').textContent = coupon ? 'Editar cupón' : 'Nuevo cupón';
+  document.getElementById('coupon-submit-btn').textContent = coupon ? 'Guardar cambios' : 'Crear cupón';
+  document.getElementById('coupon-modal-overlay').classList.add('is-open');
+}
+
+function wireCouponManagement() {
+  document.getElementById('new-coupon-btn').addEventListener('click', () => openCouponForm(null));
+  document.getElementById('coupon-modal-close').addEventListener('click', () => {
+    document.getElementById('coupon-modal-overlay').classList.remove('is-open');
+  });
+  document.getElementById('coupon-modal-overlay').addEventListener('click', (event) => {
+    if (event.target === document.getElementById('coupon-modal-overlay')) {
+      document.getElementById('coupon-modal-overlay').classList.remove('is-open');
+    }
+  });
+
+  document.getElementById('coupon-form-admin').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorBox = document.getElementById('coupon-form-error');
+    errorBox.textContent = '';
+
+    const id = document.getElementById('coupon-id').value;
+    const payload = {
+      code: document.getElementById('coupon-code').value.trim(),
+      type: document.getElementById('coupon-type').value,
+      value: document.getElementById('coupon-value').value,
+      min_purchase: document.getElementById('coupon-min-purchase').value || undefined,
+      usage_limit: document.getElementById('coupon-usage-limit').value || undefined,
+      starts_at: document.getElementById('coupon-starts-at').value || undefined,
+      ends_at: document.getElementById('coupon-ends-at').value || undefined,
+      status: document.getElementById('coupon-status').value,
+    };
+
+    try {
+      if (id) {
+        await adminService.updateCoupon(id, payload);
+        helpers.toast('Cupón actualizado.', 'success');
+      } else {
+        await adminService.createCoupon(payload);
+        helpers.toast('Cupón creado.', 'success');
+      }
+      document.getElementById('coupon-modal-overlay').classList.remove('is-open');
+      loadCoupons();
+    } catch (error) {
+      errorBox.textContent = helpers.flattenErrors(error.fields) || error.message;
+    }
+  });
+}
+
 function handleAdminError(error, errorBox) {
   if (error.status === 401 || error.status === 403) {
     errorBox.textContent = 'No tienes permisos para ver esta sección.';
@@ -1151,6 +1279,7 @@ async function initAdminPage() {
   wireProductManagement();
   wireBrandManagement();
   wirePaymentMethodManagement();
+  wireCouponManagement();
   document.getElementById('orders-status-filter').addEventListener('change', loadOrders);
   document.getElementById('inventory-filter-form').addEventListener('submit', (event) => {
     event.preventDefault();
@@ -1178,6 +1307,7 @@ async function initAdminPage() {
   loadProductsAdmin();
   loadBrands();
   loadPaymentMethods();
+  loadCoupons();
 }
 
 document.addEventListener('DOMContentLoaded', initAdminPage);

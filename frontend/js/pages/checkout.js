@@ -35,6 +35,7 @@ async function loadCheckoutSummary() {
           <span>${helpers.formatCurrency(item.unit_price * item.quantity)}</span>
         </div>
       `).join('')}
+      ${cart.coupon_code ? `<div class="summary-row" style="color:var(--exito);"><span>🏷️ Cupón ${helpers.escapeHtml(cart.coupon_code)}</span><span></span></div>` : ''}
       <div class="summary-row"><span>Subtotal</span><span>${helpers.formatCurrency(cart.subtotal)}</span></div>
       <div class="summary-row"><span>Descuento</span><span>-${helpers.formatCurrency(cart.discount_total)}</span></div>
       <div class="summary-row"><span>Impuestos</span><span>${helpers.formatCurrency(cart.tax_total)}</span></div>

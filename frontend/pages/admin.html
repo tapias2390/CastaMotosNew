@@ -42,6 +42,7 @@
       <button class="admin-nav-link" data-tab="products"><span>🏍️</span> Productos</button>
       <button class="admin-nav-link" data-tab="brands"><span>🏷️</span> Marcas</button>
       <button class="admin-nav-link" data-tab="payment-methods"><span>💳</span> Métodos de pago</button>
+      <button class="admin-nav-link" data-tab="coupons"><span>🏷️</span> Cupones</button>
     </nav>
   </aside>
 
@@ -226,6 +227,23 @@
       </table>
     </div>
     <div id="payment-methods-error" class="form-error mt-16"></div>
+  </section>
+
+  <section id="admin-tab-coupons" hidden>
+    <div class="filters-bar">
+      <button class="btn btn-primary" type="button" id="new-coupon-btn">+ Nuevo cupón</button>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Código</th><th>Tipo</th><th>Valor</th><th>Compra mínima</th><th>Usos</th><th>Vigencia</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody id="coupons-table-body">
+          <tr><td colspan="8">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="coupons-error" class="form-error mt-16"></div>
   </section>
   </main>
 </div>
@@ -436,6 +454,64 @@
       <div id="payment-config-fields"></div>
       <div class="form-error" id="payment-config-form-error"></div>
       <button class="btn btn-primary btn-block" type="submit">Guardar configuración</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="coupon-modal-overlay">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="coupon-modal-title">Nuevo cupón</h2>
+      <button class="modal__close" type="button" id="coupon-modal-close" aria-label="Cerrar">✕</button>
+    </div>
+    <form id="coupon-form-admin">
+      <input type="hidden" id="coupon-id">
+      <div class="form-group">
+        <label for="coupon-code">Código</label>
+        <input class="form-control" id="coupon-code" placeholder="Ej. BIENVENIDO10" style="text-transform:uppercase;" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="coupon-type">Tipo de descuento</label>
+          <select class="form-control" id="coupon-type">
+            <option value="percentage">Porcentaje (%)</option>
+            <option value="fixed">Monto fijo ($)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="coupon-value">Valor</label>
+          <input class="form-control" type="number" min="0" step="any" id="coupon-value" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="coupon-min-purchase">Compra mínima (opcional)</label>
+          <input class="form-control" type="number" min="0" step="any" id="coupon-min-purchase">
+        </div>
+        <div class="form-group">
+          <label for="coupon-usage-limit">Límite de usos (opcional)</label>
+          <input class="form-control" type="number" min="1" step="1" id="coupon-usage-limit">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="coupon-starts-at">Vigente desde (opcional)</label>
+          <input class="form-control" type="date" id="coupon-starts-at">
+        </div>
+        <div class="form-group">
+          <label for="coupon-ends-at">Vigente hasta (opcional)</label>
+          <input class="form-control" type="date" id="coupon-ends-at">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="coupon-status">Estado</label>
+        <select class="form-control" id="coupon-status">
+          <option value="active">Activo</option>
+          <option value="inactive">Inactivo</option>
+        </select>
+      </div>
+      <div class="form-error" id="coupon-form-error"></div>
+      <button class="btn btn-primary btn-block" type="submit" id="coupon-submit-btn">Crear cupón</button>
     </form>
   </div>
 </div>

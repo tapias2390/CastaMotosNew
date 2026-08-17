@@ -233,6 +233,24 @@ final class PdoUserRepository implements UserRepositoryInterface
         return ['data' => $customers, 'total' => $total, 'page' => $page, 'per_page' => $perPage];
     }
 
+    public function setRole(int $userId, string $roleName): void
+    {
+        $this->connection->beginTransaction();
+        try {
+            $this->connection->prepare('DELETE FROM user_roles WHERE user_id = :user_id')->execute(['user_id' => $userId]);
+
+            $stmt = $this->connection->prepare(
+                'INSERT INTO user_roles (user_id, role_id) SELECT :user_id, id FROM roles WHERE name = :role'
+            );
+            $stmt->execute(['user_id' => $userId, 'role' => $roleName]);
+
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            $this->connection->rollBack();
+            throw $e;
+        }
+    }
+
     private function rolesForUser(int $userId): array
     {
         $stmt = $this->connection->prepare(
