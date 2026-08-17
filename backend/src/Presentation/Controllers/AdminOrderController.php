@@ -12,6 +12,7 @@ use App\Infrastructure\Database\Connection;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Persistence\PdoOrderRepository;
+use App\Infrastructure\Persistence\PdoPushSubscriptionRepository;
 
 /**
  * Gestión administrativa de pedidos (sección 22, permiso manage-orders).
@@ -21,10 +22,13 @@ use App\Infrastructure\Persistence\PdoOrderRepository;
 final class AdminOrderController
 {
     private PdoOrderRepository $orders;
+    private PdoPushSubscriptionRepository $pushSubscriptions;
 
     public function __construct()
     {
-        $this->orders = new PdoOrderRepository(Connection::get());
+        $connection = Connection::get();
+        $this->orders = new PdoOrderRepository($connection);
+        $this->pushSubscriptions = new PdoPushSubscriptionRepository($connection);
     }
 
     public function index(Request $request): void
@@ -64,7 +68,7 @@ final class AdminOrderController
         /** @var \App\Domain\Entities\User $user */
         $user = $request->attribute('auth_user');
 
-        $useCase = new ChangeOrderStatusUseCase($this->orders);
+        $useCase = new ChangeOrderStatusUseCase($this->orders, $this->pushSubscriptions);
         $order = $useCase->handle($orderNumber, $data['status'], $data['comment'] ?? null, $user->id);
 
         Response::success($order, 'Estado del pedido actualizado.');

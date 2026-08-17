@@ -26,6 +26,7 @@
     { "name": "Dashboard" },
     { "name": "Administración de inventario" },
     { "name": "Métodos de pago" },
+    { "name": "Notificaciones" },
     { "name": "Archivos" }
   ],
   "components": {
@@ -384,6 +385,26 @@
       "get": {
         "tags": ["Sistema"], "summary": "Configuración pública no sensible (ej. número de WhatsApp de contacto)",
         "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "object", "properties": { "contact_whatsapp_number": { "type": "string", "description": "Vacío si no se ha configurado CONTACT_WHATSAPP_NUMBER en el backend." } } } } } } } } }
+      }
+    },
+    "/notifications/subscribe": {
+      "post": {
+        "tags": ["Notificaciones"], "summary": "Suscribir este dispositivo a notificaciones push (sección 24)",
+        "description": "Sin PUSH_PROVIDER configurado, los envíos solo quedan registrados en el log (LoggingPushProvider) — no llegan a ningún dispositivo real todavía. El token se guarda para cuando se conecte un proveedor real (Firebase, OneSignal, etc.).",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["token"],
+          "properties": { "token": { "type": "string" }, "platform": { "type": "string", "enum": ["web", "android", "ios"], "default": "web" } }
+        } } } },
+        "responses": { "201": { "description": "Suscrito" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      },
+      "delete": {
+        "tags": ["Notificaciones"], "summary": "Desuscribir este dispositivo",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["token"], "properties": { "token": { "type": "string" } }
+        } } } },
+        "responses": { "200": { "description": "Desuscrito" } }
       }
     },
     "/auth/register": {

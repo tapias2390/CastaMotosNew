@@ -15,6 +15,7 @@ use App\Infrastructure\Persistence\PdoAddressRepository;
 use App\Infrastructure\Persistence\PdoCartRepository;
 use App\Infrastructure\Persistence\PdoOrderRepository;
 use App\Infrastructure\Persistence\PdoPaymentMethodRepository;
+use App\Infrastructure\Persistence\PdoPushSubscriptionRepository;
 
 final class CheckoutController
 {
@@ -22,6 +23,7 @@ final class CheckoutController
     private PdoOrderRepository $orders;
     private PdoAddressRepository $addresses;
     private PdoPaymentMethodRepository $paymentMethods;
+    private PdoPushSubscriptionRepository $pushSubscriptions;
 
     public function __construct()
     {
@@ -30,6 +32,7 @@ final class CheckoutController
         $this->orders = new PdoOrderRepository($connection);
         $this->addresses = new PdoAddressRepository($connection);
         $this->paymentMethods = new PdoPaymentMethodRepository($connection);
+        $this->pushSubscriptions = new PdoPushSubscriptionRepository($connection);
     }
 
     public function store(Request $request): void
@@ -46,14 +49,16 @@ final class CheckoutController
 
         $cart = $this->carts->resolveActiveCart($user->id, null);
 
-        $useCase = new CheckoutUseCase($this->carts, $this->orders, $this->addresses, $this->paymentMethods);
+        $useCase = new CheckoutUseCase($this->carts, $this->orders, $this->addresses, $this->paymentMethods, $this->pushSubscriptions);
         $result = $useCase->handle(
             $user->id,
             (int) $cart['id'],
             (int) $data['address_id'],
             (int) $data['payment_method_id'],
             $data['delivery_method'],
-            $data['notes'] ?? null
+            $data['notes'] ?? null,
+            trim($user->name . ' ' . $user->lastName),
+            $user->email
         );
 
         $order = $this->orders->findByOrderNumberForUser($result['order_number'], $user->id);

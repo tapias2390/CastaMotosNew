@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\UseCases\Checkout;
 
+use App\Application\Notifications\PushNotificationFactory;
 use App\Application\Payments\PaymentGatewayFactory;
 use App\Application\Support\CartPricingCalculator;
 use App\Application\Support\OrderNumberGenerator;
@@ -11,8 +12,12 @@ use App\Domain\Repositories\AddressRepositoryInterface;
 use App\Domain\Repositories\CartRepositoryInterface;
 use App\Domain\Repositories\OrderRepositoryInterface;
 use App\Domain\Repositories\PaymentMethodRepositoryInterface;
+use App\Domain\Repositories\PushSubscriptionRepositoryInterface;
 use App\Exceptions\ValidationException;
 use App\Infrastructure\Config\Config;
+use App\Infrastructure\Logging\Logger;
+use App\Infrastructure\Mail\EmailTemplates;
+use App\Infrastructure\Mail\Mailer;
 
 /**
  * Pasos 2-6 del checkout (sección 19): valida dirección/método de pago,
@@ -26,7 +31,8 @@ final class CheckoutUseCase
         private CartRepositoryInterface $carts,
         private OrderRepositoryInterface $orders,
         private AddressRepositoryInterface $addresses,
-        private PaymentMethodRepositoryInterface $paymentMethods
+        private PaymentMethodRepositoryInterface $paymentMethods,
+        private ?PushSubscriptionRepositoryInterface $pushSubscriptions = null
     ) {
     }
 
@@ -36,7 +42,9 @@ final class CheckoutUseCase
         int $addressId,
         int $paymentMethodId,
         string $deliveryMethod,
-        ?string $notes
+        ?string $notes,
+        string $customerName = '',
+        string $customerEmail = ''
     ): array {
         if (!$this->addresses->belongsToUser($addressId, $userId)) {
             throw new ValidationException('No fue posible confirmar el pedido.', [
@@ -97,7 +105,33 @@ final class CheckoutUseCase
             'items' => $orderItems,
         ], $pricing);
 
-        return $this->orders->createFromCheckout($orderPayload);
+        $result = $this->orders->createFromCheckout($orderPayload);
+
+        // "Se crea pedido" (sección 23). Nunca debe tumbar el checkout si el
+        // correo falla (SMTP caído, etc.) — el pedido ya quedó creado y
+        // confirmado en la respuesta; el correo es un aviso adicional.
+        if ($customerEmail !== '') {
+            try {
+                $orderUrl = rtrim((string) Config::get('app.url'), '/') . '/pedido/' . $orderNumber;
+                $content = EmailTemplates::orderCreatedEmail($customerName, $orderNumber, (float) $pricing['total'], $orderUrl);
+                Mailer::send($customerEmail, $content['subject'], $content['html'], 'order_created', $userId);
+            } catch (\Throwable $e) {
+                Logger::error('Fallo al enviar correo de pedido creado', ['order_number' => $orderNumber, 'error' => $e->getMessage()]);
+            }
+        }
+
+        // "Nuevo pedido" (sección 24). Best-effort igual que el correo: sin
+        // proveedor real configurado, LoggingPushProvider solo lo registra.
+        if ($this->pushSubscriptions !== null) {
+            try {
+                $tokens = $this->pushSubscriptions->tokensForUser($userId);
+                PushNotificationFactory::make()->send($tokens, 'Pedido recibido', "Tu pedido {$orderNumber} fue creado.", ['order_number' => $orderNumber]);
+            } catch (\Throwable $e) {
+                Logger::error('Fallo al enviar push de pedido creado', ['order_number' => $orderNumber, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return $result;
     }
 
     private function assertItemsAreCheckoutable(array $items): void

@@ -21,6 +21,7 @@ use App\Presentation\Controllers\MediaController;
 use App\Presentation\Controllers\PaymentMethodController;
 use App\Presentation\Controllers\ProductController;
 use App\Presentation\Controllers\ProfileController;
+use App\Presentation\Controllers\PushSubscriptionController;
 use App\Presentation\Controllers\SearchController;
 use App\Presentation\Controllers\ServiceController;
 use App\Presentation\Controllers\SettingsController;
@@ -37,6 +38,8 @@ use App\Presentation\Middleware\RequirePermissionMiddleware;
 
 $router->get('api/health', [HealthController::class, 'index']);
 $router->get('api/settings/public', [SettingsController::class, 'publicSettings']);
+$router->post('api/notifications/subscribe', [PushSubscriptionController::class, 'subscribe'], [new AuthMiddleware()]);
+$router->delete('api/notifications/subscribe', [PushSubscriptionController::class, 'unsubscribe'], [new AuthMiddleware()]);
 
 // --- Autenticación (Fase 2) ---
 $router->post('api/auth/register', [AuthController::class, 'register']);

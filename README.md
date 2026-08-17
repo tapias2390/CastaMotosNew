@@ -25,7 +25,7 @@ Variables principales (ver `backend/.env.example` para el listado completo): `AP
 
 ### Correo en desarrollo local
 
-Si `MAIL_HOST` está vacío (caso por defecto en local), los correos de verificación y recuperación de contraseña **no se envían de verdad**: se escriben como archivos `.html` en `backend/storage/mails/` para poder abrirlos y copiar el enlace/token manualmente. Todo intento (real o simulado) queda además registrado en la tabla `email_logs`.
+Si `MAIL_HOST` está vacío (caso por defecto en local), los correos **no se envían de verdad**: se escriben como archivos `.html` en `backend/storage/mails/` para poder abrirlos y ver el resultado (o copiar el enlace/token de verificación/recuperación). Todo intento (real o simulado) queda además registrado en la tabla `email_logs`. Incluye verificación de cuenta, recuperación de contraseña y todo el ciclo de vida del pedido (sección 23: creado, confirmado, pago confirmado, preparación, en camino, entregado, cancelado).
 
 ## Base de datos
 
@@ -142,6 +142,8 @@ Las rutas marcadas con 🔒 requieren `Authorization: Bearer <token>` (JWT obten
 | DELETE | `/api/cart` | Vaciar carrito. |
 | POST 🔒 | `/api/checkout` | `{ address_id, payment_method_id, delivery_method, notes? }` → crea el pedido. |
 | GET 🔒 | `/api/orders/{orderNumber}` | Confirmación/detalle del pedido (solo el dueño; 404 si no es suyo). |
+| POST 🔒 | `/api/notifications/subscribe` | `{ token, platform? }` — suscribe este dispositivo a push (sección 24; sin proveedor real, solo se registra en el log). |
+| DELETE 🔒 | `/api/notifications/subscribe` | `{ token }` — desuscribe. |
 | GET | `/api/payment-methods` | Métodos de pago habilitados (para que el checkout sepa qué mostrar); nunca incluye `config`. |
 | GET 🔒 | `/api/admin/payment-methods` | TODOS los métodos, con `config` (`manage-payment-methods`). |
 | PUT 🔒 | `/api/admin/payment-methods/{id}` | `{ is_enabled, config? }` — activar/desactivar y configurar (`manage-payment-methods`, sección 21). |
@@ -244,7 +246,7 @@ Antes de desplegar a producción:
 
 ## Próximas fases
 
-~~Fase 7: métodos de pago configurables~~ (lista, ver "Métodos de pago" en `/admin`) · Fase 8: correos + notificaciones (hoy solo hay correo de verificación/recuperación de clave — nada de confirmación de pedido, cambio de estado ni reserva) · Fase 9: resto del dashboard administrador (roles/permisos, cupones, configuración general) · Fase 10: dashboard vendedor (incluye gestión de tiendas y restricción "solo mis productos") · Fase 11: IA · Fase 12: testing + seguridad + optimización formal.
+~~Fase 7: métodos de pago configurables~~ (lista, ver "Métodos de pago" en `/admin`) · ~~Fase 8: correos + notificaciones~~ (correos del ciclo de vida del pedido listos; push con arquitectura preparada pero sin proveedor real ni UI de permiso en el navegador) · Fase 9: resto del dashboard administrador (roles/permisos, cupones, configuración general) · Fase 10: dashboard vendedor (incluye gestión de tiendas y restricción "solo mis productos") · Fase 11: IA · Fase 12: testing + seguridad + optimización formal.
 
 **Notas de alcance:**
 - Cualquier usuario con permiso `manage-products`/`manage-services`/`manage-categories`/`manage-brands` puede gestionar todo el catálogo (no hay aún restricción "solo mi tienda") — eso se ajusta en la Fase 10.

@@ -55,7 +55,16 @@ final class Mailer
             mkdir($dir, 0775, true);
         }
 
-        $filename = sprintf('%s_%s.html', date('Y-m-d_His'), preg_replace('/[^a-z0-9]+/i', '-', $to));
+        // bin2hex(random_bytes()) además de la fecha/hora: date('Y-m-d_His') solo
+        // tiene resolución de 1 segundo — dos correos al mismo destinatario en el
+        // mismo segundo (ej. varios cambios de estado seguidos, sección 22/23)
+        // generaban el mismo nombre de archivo y el segundo pisaba al primero.
+        $filename = sprintf(
+            '%s_%s_%s.html',
+            date('Y-m-d_His'),
+            bin2hex(random_bytes(4)),
+            preg_replace('/[^a-z0-9]+/i', '-', $to)
+        );
         file_put_contents($dir . '/' . $filename, "<!-- Para: {$to} | Asunto: {$subject} -->\n" . $html);
     }
 
