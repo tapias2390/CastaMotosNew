@@ -5,11 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CASTAMOTO — Todo para tu moto</title>
 <meta name="description" content="Marketplace de motocicletas: repuestos, accesorios, cascos y servicios especializados.">
-<!-- El sitio corre bajo un subdirectorio (ej. /proyectos/castamotos/), no en la raíz
-     del dominio: <base> hace que TODAS las rutas relativas (CSS, JS, fetch, enlaces)
-     se resuelvan contra él en vez de contra la raíz real del servidor. Único lugar a
-     cambiar si el despliegue cambia de subcarpeta (ver APP_URL en backend/.env). -->
-<base href="/proyectos/castamotos/">
+<!-- El sitio puede vivir en la raíz del dominio (producción, castamotos.com)
+     o bajo un subdirectorio (desarrollo local, /proyectos/castamotos/) — en vez de
+     un <base href> fijo que hay que recordar cambiar en 9 archivos cada vez que
+     cambia el despliegue, se calcula solo según el host. document.write() es
+     intencional acá: corre durante el parseo del HTML, ANTES que <link>/<script src>
+     de más abajo intenten resolver rutas relativas, que es justo lo que <base> necesita. -->
+<script>
+(function () {
+  var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  document.write('<base href="' + (isLocal ? '/proyectos/castamotos/' : '/') + '">');
+})();
+</script>
 <link rel="stylesheet" href="frontend/css/main.css">
 <script src="frontend/js/theme-init.js"></script>
 </head>

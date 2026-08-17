@@ -199,6 +199,12 @@ final class PdoCartRepository implements CartRepositoryInterface
         $stmt->execute(['cart_id' => $cartId]);
     }
 
+    public function setCoupon(int $cartId, ?int $couponId): void
+    {
+        $stmt = $this->connection->prepare('UPDATE carts SET coupon_id = :coupon_id WHERE id = :id');
+        $stmt->execute(['coupon_id' => $couponId, 'id' => $cartId]);
+    }
+
     public function markConverted(int $cartId): void
     {
         $stmt = $this->connection->prepare("UPDATE carts SET status = 'converted' WHERE id = :id");

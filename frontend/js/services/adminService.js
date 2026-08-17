@@ -28,4 +28,10 @@ const adminService = {
   // guardar su config (nunca escritos en el código).
   paymentMethods: () => apiService.get('/admin/payment-methods'),
   updatePaymentMethod: (id, payload) => apiService.put(`/admin/payment-methods/${id}`, payload),
+
+  // Cupones (sección 30).
+  coupons: (filters = {}) => apiService.get('/admin/coupons' + catalogService.toQueryString(filters)),
+  createCoupon: (payload) => apiService.post('/admin/coupons', payload),
+  updateCoupon: (id, payload) => apiService.put(`/admin/coupons/${id}`, payload),
+  deleteCoupon: (id) => apiService.del(`/admin/coupons/${id}`),
 };

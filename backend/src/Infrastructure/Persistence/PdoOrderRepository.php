@@ -106,10 +106,10 @@ final class PdoOrderRepository implements OrderRepositoryInterface
             $orderStmt = $this->connection->prepare(
                 'INSERT INTO orders (
                     order_number, user_id, address_id, store_id, delivery_method, payment_method_id,
-                    status, subtotal, discount_total, shipping_total, tax_total, total, notes
+                    status, subtotal, discount_total, coupon_id, coupon_code, shipping_total, tax_total, total, notes
                 ) VALUES (
                     :order_number, :user_id, :address_id, :store_id, :delivery_method, :payment_method_id,
-                    :status, :subtotal, :discount_total, :shipping_total, :tax_total, :total, :notes
+                    :status, :subtotal, :discount_total, :coupon_id, :coupon_code, :shipping_total, :tax_total, :total, :notes
                 )'
             );
             $orderStmt->execute([
@@ -122,6 +122,8 @@ final class PdoOrderRepository implements OrderRepositoryInterface
                 'status' => 'PENDIENTE',
                 'subtotal' => $order['subtotal'],
                 'discount_total' => $order['discount_total'],
+                'coupon_id' => $order['coupon_id'] ?? null,
+                'coupon_code' => $order['coupon_code'] ?? null,
                 'shipping_total' => $order['shipping_total'],
                 'tax_total' => $order['tax_total'],
                 'total' => $order['total'],

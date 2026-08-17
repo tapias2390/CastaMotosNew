@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Controllers;
 
 use App\Application\Support\CartPricingCalculator;
+use App\Application\Support\CouponValidator;
 use App\Application\UseCases\Cart\AddCartItemUseCase;
 use App\Application\UseCases\Cart\RemoveCartItemUseCase;
 use App\Application\UseCases\Cart\UpdateCartItemUseCase;
@@ -16,6 +17,7 @@ use App\Infrastructure\Database\Connection;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Persistence\PdoCartRepository;
+use App\Infrastructure\Persistence\PdoCouponRepository;
 use App\Infrastructure\Persistence\PdoProductRepository;
 use App\Infrastructure\Persistence\PdoServiceRepository;
 
@@ -24,6 +26,7 @@ final class CartController
     private PdoCartRepository $carts;
     private PdoProductRepository $products;
     private PdoServiceRepository $services;
+    private PdoCouponRepository $coupons;
 
     public function __construct()
     {
@@ -31,6 +34,7 @@ final class CartController
         $this->carts = new PdoCartRepository($connection);
         $this->products = new PdoProductRepository($connection);
         $this->services = new PdoServiceRepository($connection);
+        $this->coupons = new PdoCouponRepository($connection);
     }
 
     public function show(Request $request): void
@@ -88,6 +92,43 @@ final class CartController
         Response::success($this->buildCartResponse($cart), 'Carrito vaciado.');
     }
 
+    /** Aplicar cupón (sección 30) — valida contra el subtotal EN VIVO del carrito. */
+    public function applyCoupon(Request $request): void
+    {
+        $data = Validator::make($request->input(), ['code' => 'required|max:50'])->validate();
+
+        $cart = $this->resolveCart($request);
+        $coupon = $this->coupons->findByCode(strtoupper(trim($data['code'])));
+
+        if ($coupon === null) {
+            throw new ValidationException('No fue posible aplicar el cupón.', [
+                'code' => ['El código ingresado no existe.'],
+            ]);
+        }
+
+        $items = $this->carts->itemsWithLiveData((int) $cart['id']);
+        $pricingWithoutCoupon = CartPricingCalculator::calculate($items, 'domicilio', 0, 0);
+        $subtotalAfterItemDiscounts = $pricingWithoutCoupon['subtotal'] - $pricingWithoutCoupon['discount_total'];
+
+        CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts);
+
+        $this->carts->setCoupon((int) $cart['id'], (int) $coupon['id']);
+        // $cart es un array (por valor): setCoupon() ya actualizó la fila en BD,
+        // pero esta copia local sigue con el coupon_id viejo si no se refleja acá.
+        $cart['coupon_id'] = $coupon['id'];
+
+        Response::success($this->buildCartResponse($cart), 'Cupón aplicado correctamente.');
+    }
+
+    public function removeCoupon(Request $request): void
+    {
+        $cart = $this->resolveCart($request);
+        $this->carts->setCoupon((int) $cart['id'], null);
+        $cart['coupon_id'] = null; // misma razón que en applyCoupon(): $cart es una copia por valor
+
+        Response::success($this->buildCartResponse($cart), 'Cupón removido.');
+    }
+
     /**
      * Resuelve el carrito activo por usuario autenticado o por X-Cart-Token
      * de invitado (sección 18). No requiere AuthMiddleware: el carrito
@@ -109,17 +150,36 @@ final class CartController
     {
         $items = $this->carts->itemsWithLiveData((int) $cart['id']);
 
+        // Si el cupón aplicado dejó de ser válido entretanto (venció, se
+        // desactivó, alcanzó su límite), se quita solo en vez de que el
+        // carrito se quede mostrando un descuento que ya no aplicaría al
+        // pagar (sección 54: nunca confiar en un estado leído de antes).
+        $coupon = !empty($cart['coupon_id']) ? $this->coupons->find((int) $cart['coupon_id']) : null;
+        if ($coupon !== null) {
+            $subtotalPreview = CartPricingCalculator::calculate($items, 'domicilio', 0, 0);
+            $subtotalAfterItemDiscounts = $subtotalPreview['subtotal'] - $subtotalPreview['discount_total'];
+
+            try {
+                CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts);
+            } catch (ValidationException $e) {
+                $this->carts->setCoupon((int) $cart['id'], null);
+                $coupon = null;
+            }
+        }
+
         $pricing = CartPricingCalculator::calculate(
             $items,
             'domicilio', // vista previa; el envío real se confirma en el checkout con el método elegido
             (float) Config::get('app.shipping.flat_rate', 12000),
-            (float) Config::get('app.shipping.free_threshold', 300000)
+            (float) Config::get('app.shipping.free_threshold', 300000),
+            $coupon
         );
 
         return array_merge([
             'cart_id' => (int) $cart['id'],
             'cart_token' => $cart['token'],
             'items' => $items,
+            'coupon_code' => $coupon['code'] ?? null,
         ], $pricing);
     }
 

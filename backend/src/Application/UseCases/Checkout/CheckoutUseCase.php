@@ -7,9 +7,11 @@ namespace App\Application\UseCases\Checkout;
 use App\Application\Notifications\PushNotificationFactory;
 use App\Application\Payments\PaymentGatewayFactory;
 use App\Application\Support\CartPricingCalculator;
+use App\Application\Support\CouponValidator;
 use App\Application\Support\OrderNumberGenerator;
 use App\Domain\Repositories\AddressRepositoryInterface;
 use App\Domain\Repositories\CartRepositoryInterface;
+use App\Domain\Repositories\CouponRepositoryInterface;
 use App\Domain\Repositories\OrderRepositoryInterface;
 use App\Domain\Repositories\PaymentMethodRepositoryInterface;
 use App\Domain\Repositories\PushSubscriptionRepositoryInterface;
@@ -32,7 +34,8 @@ final class CheckoutUseCase
         private OrderRepositoryInterface $orders,
         private AddressRepositoryInterface $addresses,
         private PaymentMethodRepositoryInterface $paymentMethods,
-        private ?PushSubscriptionRepositoryInterface $pushSubscriptions = null
+        private ?PushSubscriptionRepositoryInterface $pushSubscriptions = null,
+        private ?CouponRepositoryInterface $coupons = null
     ) {
     }
 
@@ -68,11 +71,29 @@ final class CheckoutUseCase
         $items = $this->carts->itemsWithLiveData($cartId);
         $this->assertItemsAreCheckoutable($items);
 
+        // Re-verificación autoritativa del cupón (sección 30/54), mismo
+        // criterio que el stock y las pasarelas de pago: lo que se validó al
+        // aplicarlo en el carrito pudo cambiar (venció, alguien más agotó su
+        // cupo) entre ese momento y este — nunca se confía en lo ya validado.
+        $coupon = null;
+        if ($this->coupons !== null) {
+            $cart = $this->carts->find($cartId);
+            if ($cart !== null && !empty($cart['coupon_id'])) {
+                $coupon = $this->coupons->find((int) $cart['coupon_id']);
+                if ($coupon !== null) {
+                    $subtotalPreview = CartPricingCalculator::calculate($items, $deliveryMethod, 0, 0);
+                    $subtotalAfterItemDiscounts = $subtotalPreview['subtotal'] - $subtotalPreview['discount_total'];
+                    CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts);
+                }
+            }
+        }
+
         $pricing = CartPricingCalculator::calculate(
             $items,
             $deliveryMethod,
             (float) Config::get('app.shipping.flat_rate', 12000),
-            (float) Config::get('app.shipping.free_threshold', 300000)
+            (float) Config::get('app.shipping.free_threshold', 300000),
+            $coupon
         );
 
         $orderNumber = OrderNumberGenerator::generate(fn (string $number) => $this->orders->existsByOrderNumber($number));
@@ -103,9 +124,15 @@ final class CheckoutUseCase
             'notes' => $notes,
             'cart_id' => $cartId,
             'items' => $orderItems,
+            'coupon_id' => $coupon['id'] ?? null,
+            'coupon_code' => $coupon['code'] ?? null,
         ], $pricing);
 
         $result = $this->orders->createFromCheckout($orderPayload);
+
+        if ($coupon !== null) {
+            $this->coupons->incrementUsage((int) $coupon['id']);
+        }
 
         // "Se crea pedido" (sección 23). Nunca debe tumbar el checkout si el
         // correo falla (SMTP caído, etc.) — el pedido ya quedó creado y

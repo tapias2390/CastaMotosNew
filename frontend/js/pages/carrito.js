@@ -23,6 +23,7 @@ async function loadCartPage() {
         <div id="cart-lines">${cart.items.map(cartLineMarkup).join('')}</div>
         <div>
           <div class="summary-box">
+            ${couponBoxMarkup(cart)}
             <div class="summary-row"><span>Subtotal</span><span>${helpers.formatCurrency(cart.subtotal)}</span></div>
             <div class="summary-row"><span>Descuento</span><span>-${helpers.formatCurrency(cart.discount_total)}</span></div>
             <div class="summary-row"><span>Impuestos</span><span>${helpers.formatCurrency(cart.tax_total)}</span></div>
@@ -35,6 +36,7 @@ async function loadCartPage() {
     `;
 
     wireCartLineEvents();
+    wireCouponEvents();
 
     document.getElementById('go-to-checkout-btn').addEventListener('click', () => {
       if (!authService.isAuthenticated()) {
@@ -47,6 +49,55 @@ async function loadCartPage() {
   } catch (error) {
     mount.innerHTML = `<p class="error-state">${helpers.escapeHtml(error.message)}</p>`;
   }
+}
+
+/** Cupón de descuento (sección 30): input para aplicar uno, o el código ya
+ * aplicado con botón para quitarlo. */
+function couponBoxMarkup(cart) {
+  if (cart.coupon_code) {
+    return `
+      <div class="coupon-box coupon-box--applied">
+        <span>🏷️ Cupón <strong>${helpers.escapeHtml(cart.coupon_code)}</strong> aplicado</span>
+        <button type="button" class="share-btn" id="remove-coupon-btn">Quitar</button>
+      </div>
+    `;
+  }
+
+  return `
+    <form class="coupon-box" id="coupon-form">
+      <input type="text" class="form-control" id="coupon-input" placeholder="¿Tienes un cupón?" style="text-transform:uppercase;">
+      <button type="submit" class="btn btn-secondary">Aplicar</button>
+    </form>
+  `;
+}
+
+function wireCouponEvents() {
+  const form = document.getElementById('coupon-form');
+  if (form) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const code = document.getElementById('coupon-input').value.trim();
+      if (!code) return;
+
+      try {
+        await cartService.applyCoupon(code);
+        helpers.toast('Cupón aplicado.', 'success');
+        loadCartPage();
+      } catch (error) {
+        helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
+      }
+    });
+  }
+
+  document.getElementById('remove-coupon-btn')?.addEventListener('click', async () => {
+    try {
+      await cartService.removeCoupon();
+      helpers.toast('Cupón removido.', 'success');
+      loadCartPage();
+    } catch (error) {
+      helpers.toast(error.message, 'error');
+    }
+  });
 }
 
 function cartLineMarkup(item) {

@@ -47,4 +47,7 @@ interface CartRepositoryInterface
      * usuario recién autenticado (sección 18: invitado → autenticado).
      */
     public function mergeGuestCartIntoUser(int $userId, string $token): void;
+
+    /** Aplica (o quita, con null) un cupón al carrito (sección 30). */
+    public function setCoupon(int $cartId, ?int $couponId): void;
 }

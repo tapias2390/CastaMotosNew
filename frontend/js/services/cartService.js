@@ -9,6 +9,8 @@ const cartService = {
   updateItem: (itemId, quantity) => apiService.put(`/cart/items/${itemId}`, { quantity }),
   removeItem: (itemId) => apiService.del(`/cart/items/${itemId}`),
   clear: () => apiService.del('/cart'),
+  applyCoupon: (code) => apiService.post('/cart/coupon', { code }),
+  removeCoupon: () => apiService.del('/cart/coupon'),
 
   addresses: () => apiService.get('/addresses'),
   createAddress: (payload) => apiService.post('/addresses', payload),

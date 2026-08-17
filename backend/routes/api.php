@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Infrastructure\Http\Router;
 use App\Presentation\Controllers\AddressController;
 use App\Presentation\Controllers\AdminInventoryController;
+use App\Presentation\Controllers\AdminCouponController;
 use App\Presentation\Controllers\AdminCustomerController;
 use App\Presentation\Controllers\AdminOrderController;
 use App\Presentation\Controllers\AdminPaymentMethodController;
@@ -115,6 +116,8 @@ $router->post('api/cart/items', [CartController::class, 'addItem'], [new Optiona
 $router->put('api/cart/items/{itemId}', [CartController::class, 'updateItem'], [new OptionalAuthMiddleware()]);
 $router->delete('api/cart/items/{itemId}', [CartController::class, 'removeItem'], [new OptionalAuthMiddleware()]);
 $router->delete('api/cart', [CartController::class, 'clear'], [new OptionalAuthMiddleware()]);
+$router->post('api/cart/coupon', [CartController::class, 'applyCoupon'], [new OptionalAuthMiddleware()]);
+$router->delete('api/cart/coupon', [CartController::class, 'removeCoupon'], [new OptionalAuthMiddleware()]);
 
 // --- Métodos de pago habilitados (consulta pública para el checkout) ---
 $router->get('api/payment-methods', [PaymentMethodController::class, 'index']);
@@ -132,6 +135,10 @@ $router->put('api/admin/orders/{orderNumber}/status', [AdminOrderController::cla
 $router->get('api/admin/reservations', [AdminReservationController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 $router->get('api/admin/dashboard/summary', [DashboardController::class, 'summary'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 $router->get('api/admin/customers', [AdminCustomerController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-users')]);
+$router->get('api/admin/coupons', [AdminCouponController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-coupons')]);
+$router->post('api/admin/coupons', [AdminCouponController::class, 'store'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-coupons')]);
+$router->put('api/admin/coupons/{id}', [AdminCouponController::class, 'update'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-coupons')]);
+$router->delete('api/admin/coupons/{id}', [AdminCouponController::class, 'destroy'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-coupons')]);
 
 $router->get('api/admin/inventory', [AdminInventoryController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);
 $router->get('api/admin/inventory/movements', [AdminInventoryController::class, 'movements'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);
