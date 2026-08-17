@@ -11,6 +11,9 @@ function toQueryString(params = {}) {
 const catalogService = {
   categories: () => apiService.get('/categories'),
   brands: () => apiService.get('/brands'),
+  createBrand: (payload) => apiService.post('/brands', payload),
+  updateBrand: (id, payload) => apiService.put(`/brands/${id}`, payload),
+  deleteBrand: (id) => apiService.del(`/brands/${id}`),
 
   products: (filters = {}) => apiService.get('/products' + toQueryString(filters)),
   product: (slug) => apiService.get(`/products/${encodeURIComponent(slug)}`),

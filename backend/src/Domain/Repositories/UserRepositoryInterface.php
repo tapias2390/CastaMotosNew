@@ -43,4 +43,14 @@ interface UserRepositoryInterface
      * @return string[] Nombres de los permisos que tiene el usuario a través de sus roles.
      */
     public function permissionsForUser(int $userId): array;
+
+    /**
+     * Listado de clientes para el panel admin (sección 28: "dónde se ven los
+     * clientes"), con roles, cantidad de pedidos y total gastado. Por
+     * defecto excluye cuentas de staff (administrador/superadministrador) —
+     * ver filtro "include_staff".
+     *
+     * @return array{data: array, total: int, page: int, per_page: int}
+     */
+    public function paginateForAdmin(array $filters): array;
 }

@@ -611,10 +611,12 @@
       "post": {
         "tags": ["Productos"], "summary": "Crear producto (manage-products)", "security": [{ "bearerAuth": [] }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": {
-          "type": "object", "required": ["name", "category_id", "sku", "price", "stock"],
+          "type": "object", "required": ["name", "category_id", "price", "stock"],
           "properties": {
             "name": { "type": "string" }, "category_id": { "type": "integer" }, "brand_id": { "type": "integer" },
-            "short_description": { "type": "string" }, "sku": { "type": "string" }, "price": { "type": "number" },
+            "short_description": { "type": "string" },
+            "sku": { "type": "string", "description": "Opcional: si se omite o va vacío, se genera automáticamente un SKU único a partir de la categoría (sección 10, SkuGenerator) — ej. \"MOT-55A69D\"." },
+            "price": { "type": "number" },
             "previous_price": { "type": "number" }, "discount_percentage": { "type": "number" }, "tax_rate": { "type": "number" },
             "stock": { "type": "integer" }, "min_stock": { "type": "integer" }, "status": { "type": "string", "enum": ["draft", "active", "inactive", "out_of_stock"] }
           }
@@ -910,6 +912,20 @@
         "tags": ["Dashboard"], "summary": "Resumen del negocio para el panel admin (manage-orders)",
         "description": "Ingresos (hoy/30 días/histórico), pedidos por estado, serie de ingresos por día (14 días), top 5 productos vendidos, stock bajo, reservas próximas y usuarios nuevos — todo calculado de datos reales, sección 28.",
         "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "OK" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/admin/customers": {
+      "get": {
+        "tags": ["Dashboard"], "summary": "Listado de clientes registrados (manage-users)",
+        "description": "Excluye cuentas de staff (administrador/superadministrador) salvo que include_staff=1. Incluye cantidad de pedidos y total comprado (excluyendo CANCELADO/DEVUELTO).",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "search", "in": "query", "description": "Busca por nombre, apellido o correo.", "schema": { "type": "string" } },
+          { "name": "include_staff", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer" } }
+        ],
         "responses": { "200": { "description": "OK" }, "403": { "$ref": "#/components/responses/Forbidden" } }
       }
     },

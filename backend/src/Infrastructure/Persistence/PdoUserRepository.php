@@ -169,6 +169,70 @@ final class PdoUserRepository implements UserRepositoryInterface
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
+    public function paginateForAdmin(array $filters): array
+    {
+        $conditions = ['u.deleted_at IS NULL'];
+        $params = [];
+
+        if (!empty($filters['search'])) {
+            $conditions[] = '(u.name LIKE :search_name OR u.last_name LIKE :search_last OR u.email LIKE :search_email)';
+            $term = '%' . $filters['search'] . '%';
+            $params['search_name'] = $term;
+            $params['search_last'] = $term;
+            $params['search_email'] = $term;
+        }
+
+        // Por defecto solo clientes (sección 28): no tiene sentido mezclar
+        // cuentas de staff en un listado pensado para ver a los compradores.
+        if (empty($filters['include_staff'])) {
+            $conditions[] = "NOT EXISTS (
+                SELECT 1 FROM user_roles ur2 INNER JOIN roles r2 ON r2.id = ur2.role_id
+                WHERE ur2.user_id = u.id AND r2.name IN ('administrador', 'superadministrador')
+            )";
+        }
+
+        $where = 'WHERE ' . implode(' AND ', $conditions);
+
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $perPage = min(100, max(1, (int) ($filters['per_page'] ?? 30)));
+        $offset = ($page - 1) * $perPage;
+
+        $countStmt = $this->connection->prepare("SELECT COUNT(*) FROM users u {$where}");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        $sql = "SELECT u.id, u.name, u.last_name, u.email, u.phone, u.created_at, u.email_verified_at,
+                    GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ',') AS roles,
+                    COUNT(DISTINCT o.id) AS orders_count,
+                    COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELADO', 'DEVUELTO') THEN o.total ELSE 0 END), 0) AS total_spent
+                FROM users u
+                LEFT JOIN user_roles ur ON ur.user_id = u.id
+                LEFT JOIN roles r ON r.id = ur.role_id
+                LEFT JOIN orders o ON o.user_id = u.id AND o.deleted_at IS NULL
+                {$where}
+                GROUP BY u.id
+                ORDER BY u.created_at DESC
+                LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->connection->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $customers = array_map(static function (array $row): array {
+            $row['roles'] = $row['roles'] !== null ? explode(',', $row['roles']) : [];
+            $row['orders_count'] = (int) $row['orders_count'];
+            $row['total_spent'] = (float) $row['total_spent'];
+
+            return $row;
+        }, $stmt->fetchAll());
+
+        return ['data' => $customers, 'total' => $total, 'page' => $page, 'per_page' => $perPage];
+    }
+
     private function rolesForUser(int $userId): array
     {
         $stmt = $this->connection->prepare(

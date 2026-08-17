@@ -40,9 +40,11 @@ const ADMIN_SECTIONS = {
   dashboard: { title: 'Resumen', hint: 'Cómo va el negocio: ventas, pedidos y lo que necesita tu atención.' },
   orders: { title: 'Pedidos', hint: 'Cambia el estado de cada pedido con la acción que corresponde según en qué paso está.' },
   reservations: { title: 'Reservas', hint: 'Servicios agendados por los clientes, ordenados por fecha y hora.' },
+  customers: { title: 'Clientes', hint: 'Cuentas de clientes registrados, con su historial de compras.' },
   inventory: { title: 'Inventario', hint: 'Stock disponible por producto y ajustes manuales con trazabilidad.' },
   services: { title: 'Servicios', hint: 'Crea, edita y elimina los servicios publicados en el catálogo.' },
   products: { title: 'Productos', hint: 'Crea, edita y elimina los productos publicados en el catálogo.' },
+  brands: { title: 'Marcas', hint: 'Fabricantes/marcas de los productos (ej. AKT, Bajaj) — lo más parecido a "proveedores" en un marketplace, donde no se le compra inventario a terceros para revender.' },
 };
 
 /** Barra lateral (fija en escritorio, cajón deslizable en pantallas angostas). */
@@ -69,7 +71,7 @@ function wireSidebar() {
       link.classList.add('is-active');
 
       const tab = link.dataset.tab;
-      ['dashboard', 'orders', 'reservations', 'inventory', 'services', 'products'].forEach((name) => {
+      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands'].forEach((name) => {
         const section = document.getElementById(`admin-tab-${name}`);
         section.hidden = name !== tab;
         if (name === tab) {
@@ -248,6 +250,43 @@ async function loadReservations() {
         }
       });
     });
+  } catch (error) {
+    handleAdminError(error, errorBox);
+  }
+}
+
+/**
+ * Clientes registrados (sección 28: "dónde se ven los clientes"). Este
+ * marketplace no maneja proveedores externos de inventario — cada producto
+ * es propio de CASTAMOTO o de una tienda vendedora del marketplace; esa
+ * gestión de tiendas/vendedores es la Fase 10 del prompt maestro, todavía
+ * no construida (ver comentario en AdminCustomerController).
+ */
+async function loadCustomers() {
+  const body = document.getElementById('customers-table-body');
+  const errorBox = document.getElementById('customers-error');
+  errorBox.textContent = '';
+
+  const search = document.getElementById('customers-search').value.trim() || undefined;
+
+  try {
+    const result = await adminService.customers({ search, per_page: 50 });
+
+    if (result.data.length === 0) {
+      body.innerHTML = '<tr><td colspan="6">No hay clientes registrados todavía.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = result.data.map((customer) => `
+      <tr>
+        <td>${helpers.escapeHtml(customer.name)} ${helpers.escapeHtml(customer.last_name)}</td>
+        <td>${helpers.escapeHtml(customer.email)}${customer.phone ? `<br><span style="color:var(--gris-texto);">${helpers.escapeHtml(customer.phone)}</span>` : ''}</td>
+        <td>${new Date(customer.created_at).toLocaleDateString('es-CO')}</td>
+        <td>${customer.email_verified_at ? '<span class="status-badge is-final-good">Sí</span>' : '<span class="status-badge is-final-bad">No</span>'}</td>
+        <td>${customer.orders_count}</td>
+        <td>${helpers.formatCurrency(customer.total_spent)}</td>
+      </tr>
+    `).join('');
   } catch (error) {
     handleAdminError(error, errorBox);
   }
@@ -756,7 +795,9 @@ function productFormPayload() {
 
   return {
     name: document.getElementById('product-name').value.trim(),
-    sku: document.getElementById('product-sku').value.trim(),
+    // Vacío = el backend genera un SKU único automático (sección 10); en
+    // edición, vacío conserva el SKU actual (ver UpdateProductUseCase).
+    sku: document.getElementById('product-sku').value.trim() || undefined,
     category_id: document.getElementById('product-category').value,
     brand_id: document.getElementById('product-brand').value || undefined,
     price: document.getElementById('product-price').value,
@@ -800,6 +841,9 @@ function wireProductManagement() {
       // "edición" sin cerrarse, para poder subir fotos de inmediato.
       document.getElementById('product-id').value = product.id;
       document.getElementById('product-slug').value = product.slug;
+      // Muestra el SKU real ya guardado — si se dejó vacío, este es el que
+      // el backend generó automáticamente (sección 10).
+      document.getElementById('product-sku').value = product.sku;
       document.getElementById('product-modal-title').textContent = 'Editar producto';
       document.getElementById('product-submit-btn').textContent = 'Guardar cambios';
       document.getElementById('product-stock').disabled = true;
@@ -838,6 +882,116 @@ function wireProductManagement() {
   });
 }
 
+/**
+ * Marcas (permiso manage-brands, ya existía desde la Fase 3 en el backend
+ * sin ninguna interfaz). Es lo más parecido a "proveedores" que tiene un
+ * marketplace como este: no se compra inventario a terceros para revenderlo,
+ * cada producto ya viene con su marca/fabricante real (ej. AKT, Bajaj).
+ */
+async function loadBrands() {
+  const body = document.getElementById('brands-table-body');
+  const errorBox = document.getElementById('brands-error');
+  errorBox.textContent = '';
+
+  try {
+    const brands = await catalogService.brands();
+
+    if (brands.length === 0) {
+      body.innerHTML = '<tr><td colspan="4">Todavía no hay marcas creadas.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = brands.map((brand) => `
+      <tr data-brand-id="${brand.id}">
+        <td>${helpers.escapeHtml(brand.name)}</td>
+        <td>${brand.logo ? `<img src="${helpers.escapeHtml(brand.logo)}" alt="" style="height:28px;width:auto;border-radius:4px;">` : '—'}</td>
+        <td><span class="status-badge ${brand.status === 'active' ? 'is-final-good' : ''}">${brand.status === 'active' ? 'Activa' : 'Inactiva'}</span></td>
+        <td>
+          <div class="flex gap-8">
+            <button class="btn btn-secondary" data-action="edit-brand">Editar</button>
+            <button class="btn btn-secondary" data-action="delete-brand">Eliminar</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('[data-action="edit-brand"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const brand = brands.find((b) => b.id === Number(button.closest('tr').dataset.brandId));
+        openBrandForm(brand);
+      });
+    });
+
+    body.querySelectorAll('[data-action="delete-brand"]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.closest('tr').dataset.brandId;
+        if (!window.confirm('¿Eliminar esta marca? Los productos que la usan quedarán sin marca asignada.')) return;
+
+        try {
+          await catalogService.deleteBrand(id);
+          helpers.toast('Marca eliminada.', 'success');
+          loadBrands();
+        } catch (error) {
+          helpers.toast(error.message, 'error');
+        }
+      });
+    });
+  } catch (error) {
+    handleAdminError(error, errorBox);
+  }
+}
+
+function openBrandForm(brand) {
+  document.getElementById('brand-form').reset();
+  document.getElementById('brand-form-error').textContent = '';
+  document.getElementById('brand-id').value = brand ? brand.id : '';
+  document.getElementById('brand-name').value = brand ? brand.name : '';
+  document.getElementById('brand-logo').value = brand ? (brand.logo || '') : '';
+  document.getElementById('brand-status').value = brand ? brand.status : 'active';
+  document.getElementById('brand-modal-title').textContent = brand ? 'Editar marca' : 'Nueva marca';
+  document.getElementById('brand-submit-btn').textContent = brand ? 'Guardar cambios' : 'Crear marca';
+  document.getElementById('brand-modal-overlay').classList.add('is-open');
+}
+
+function wireBrandManagement() {
+  document.getElementById('new-brand-btn').addEventListener('click', () => openBrandForm(null));
+  document.getElementById('brand-modal-close').addEventListener('click', () => {
+    document.getElementById('brand-modal-overlay').classList.remove('is-open');
+  });
+  document.getElementById('brand-modal-overlay').addEventListener('click', (event) => {
+    if (event.target === document.getElementById('brand-modal-overlay')) {
+      document.getElementById('brand-modal-overlay').classList.remove('is-open');
+    }
+  });
+
+  document.getElementById('brand-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorBox = document.getElementById('brand-form-error');
+    errorBox.textContent = '';
+
+    const id = document.getElementById('brand-id').value;
+    const payload = {
+      name: document.getElementById('brand-name').value.trim(),
+      logo: document.getElementById('brand-logo').value.trim() || undefined,
+      status: document.getElementById('brand-status').value,
+    };
+
+    try {
+      if (id) {
+        await catalogService.updateBrand(id, payload);
+        helpers.toast('Marca actualizada.', 'success');
+      } else {
+        await catalogService.createBrand(payload);
+        helpers.toast('Marca creada.', 'success');
+      }
+      document.getElementById('brand-modal-overlay').classList.remove('is-open');
+      loadBrands();
+    } catch (error) {
+      errorBox.textContent = helpers.flattenErrors(error.fields) || error.message;
+    }
+  });
+}
+
 function handleAdminError(error, errorBox) {
   if (error.status === 401 || error.status === 403) {
     errorBox.textContent = 'No tienes permisos para ver esta sección.';
@@ -855,6 +1009,7 @@ async function initAdminPage() {
   wireSidebar();
   wireServiceManagement();
   wireProductManagement();
+  wireBrandManagement();
   document.getElementById('orders-status-filter').addEventListener('change', loadOrders);
   document.getElementById('inventory-filter-form').addEventListener('submit', (event) => {
     event.preventDefault();
@@ -866,15 +1021,21 @@ async function initAdminPage() {
     document.getElementById('reservations-date-filter').value = '';
     loadReservations();
   });
+  document.getElementById('customers-search-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    loadCustomers();
+  });
 
   loadDashboard();
   loadOrders();
   loadReservations();
+  loadCustomers();
   loadInventory();
   populateServiceCategorySelect();
   loadServices();
   populateProductSelects();
   loadProductsAdmin();
+  loadBrands();
 }
 
 document.addEventListener('DOMContentLoaded', initAdminPage);

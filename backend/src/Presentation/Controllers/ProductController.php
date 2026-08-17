@@ -37,7 +37,9 @@ final class ProductController
         'category_id' => 'required|integer',
         'brand_id' => 'integer',
         'short_description' => 'max:500',
-        'sku' => 'required|max:100',
+        // Opcional (sección 10): si se deja vacío al crear, se genera un SKU
+        // único automáticamente (ver CreateProductUseCase/SkuGenerator).
+        'sku' => 'max:100',
         'internal_code' => 'max:100',
         'price' => 'required|numeric|gte:0',
         'previous_price' => 'numeric|gte:0',

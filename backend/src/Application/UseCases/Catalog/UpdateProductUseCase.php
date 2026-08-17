@@ -22,8 +22,17 @@ final class UpdateProductUseCase
 
     public function handle(int $id, array $data): void
     {
-        if (!$this->products->exists($id)) {
+        $current = $this->products->find($id);
+        if ($current === null) {
             throw new NotFoundException('Producto no encontrado.');
+        }
+
+        // Un SKU vacío en la edición no debe interpretarse como "generar uno
+        // nuevo" (eso solo aplica al crear, sección 10) — cambiar el
+        // identificador de un producto ya existente no debe pasar por
+        // accidente por dejar el campo en blanco, se conserva el actual.
+        if (empty($data['sku'])) {
+            $data['sku'] = $current['sku'];
         }
 
         $errors = [];

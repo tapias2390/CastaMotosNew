@@ -20,4 +20,7 @@ const adminService = {
 
   // Resumen del negocio para la pestaña "Resumen" (sección 28).
   dashboardSummary: () => apiService.get('/admin/dashboard/summary'),
+
+  // Clientes registrados (sección 28) — excluye staff por defecto.
+  customers: (filters = {}) => apiService.get('/admin/customers' + catalogService.toQueryString(filters)),
 };

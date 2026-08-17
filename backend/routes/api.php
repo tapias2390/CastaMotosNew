@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Infrastructure\Http\Router;
 use App\Presentation\Controllers\AddressController;
 use App\Presentation\Controllers\AdminInventoryController;
+use App\Presentation\Controllers\AdminCustomerController;
 use App\Presentation\Controllers\AdminOrderController;
 use App\Presentation\Controllers\AdminReservationController;
 use App\Presentation\Controllers\AuthController;
@@ -124,6 +125,7 @@ $router->get('api/admin/orders/{orderNumber}', [AdminOrderController::class, 'sh
 $router->put('api/admin/orders/{orderNumber}/status', [AdminOrderController::class, 'updateStatus'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 $router->get('api/admin/reservations', [AdminReservationController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 $router->get('api/admin/dashboard/summary', [DashboardController::class, 'summary'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
+$router->get('api/admin/customers', [AdminCustomerController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-users')]);
 
 $router->get('api/admin/inventory', [AdminInventoryController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);
 $router->get('api/admin/inventory/movements', [AdminInventoryController::class, 'movements'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);

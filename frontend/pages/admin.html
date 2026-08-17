@@ -25,9 +25,11 @@
       <button class="admin-nav-link is-active" data-tab="dashboard"><span>📈</span> Resumen</button>
       <button class="admin-nav-link" data-tab="orders"><span>📦</span> Pedidos</button>
       <button class="admin-nav-link" data-tab="reservations"><span>📅</span> Reservas</button>
+      <button class="admin-nav-link" data-tab="customers"><span>🧑‍🤝‍🧑</span> Clientes</button>
       <button class="admin-nav-link" data-tab="inventory"><span>📊</span> Inventario</button>
       <button class="admin-nav-link" data-tab="services"><span>🔧</span> Servicios</button>
       <button class="admin-nav-link" data-tab="products"><span>🏍️</span> Productos</button>
+      <button class="admin-nav-link" data-tab="brands"><span>🏷️</span> Marcas</button>
     </nav>
   </aside>
 
@@ -105,6 +107,26 @@
     <div id="reservations-error" class="form-error mt-16"></div>
   </section>
 
+  <section id="admin-tab-customers" hidden>
+    <div class="filters-bar">
+      <form id="customers-search-form" style="display:flex;gap:8px;">
+        <input type="search" class="form-control" id="customers-search" placeholder="Buscar por nombre o correo..." style="max-width:260px;">
+        <button class="btn btn-secondary" type="submit">Buscar</button>
+      </form>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Cliente</th><th>Contacto</th><th>Registrado</th><th>Correo verificado</th><th>Pedidos</th><th>Total comprado</th></tr>
+        </thead>
+        <tbody id="customers-table-body">
+          <tr><td colspan="6">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="customers-error" class="form-error mt-16"></div>
+  </section>
+
   <section id="admin-tab-inventory" hidden>
     <form id="inventory-filter-form" class="filters-bar">
       <input id="inventory-search" class="form-control" type="search" placeholder="Buscar por nombre o SKU..." style="max-width:260px;">
@@ -158,6 +180,23 @@
       </table>
     </div>
     <div id="products-error" class="form-error mt-16"></div>
+  </section>
+
+  <section id="admin-tab-brands" hidden>
+    <div class="filters-bar">
+      <button class="btn btn-primary" type="button" id="new-brand-btn">+ Nueva marca</button>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Marca</th><th>Logo</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody id="brands-table-body">
+          <tr><td colspan="4">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="brands-error" class="form-error mt-16"></div>
   </section>
   </main>
 </div>
@@ -261,8 +300,8 @@
           <input class="form-control" id="product-name" required>
         </div>
         <div class="form-group">
-          <label for="product-sku">SKU</label>
-          <input class="form-control" id="product-sku" required>
+          <label for="product-sku">SKU (opcional — se genera automático y único si lo dejas vacío)</label>
+          <input class="form-control" id="product-sku" placeholder="Ej. CAS-4F2A1B">
         </div>
       </div>
 
@@ -324,6 +363,35 @@
 
       <div class="form-error" id="product-form-error"></div>
       <button class="btn btn-primary btn-block" type="submit" id="product-submit-btn">Crear producto</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="brand-modal-overlay">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="brand-modal-title">Nueva marca</h2>
+      <button class="modal__close" type="button" id="brand-modal-close" aria-label="Cerrar">✕</button>
+    </div>
+    <form id="brand-form">
+      <input type="hidden" id="brand-id">
+      <div class="form-group">
+        <label for="brand-name">Nombre</label>
+        <input class="form-control" id="brand-name" required>
+      </div>
+      <div class="form-group">
+        <label for="brand-logo">URL del logo (opcional)</label>
+        <input class="form-control" id="brand-logo" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label for="brand-status">Estado</label>
+        <select class="form-control" id="brand-status">
+          <option value="active">Activa</option>
+          <option value="inactive">Inactiva</option>
+        </select>
+      </div>
+      <div class="form-error" id="brand-form-error"></div>
+      <button class="btn btn-primary btn-block" type="submit" id="brand-submit-btn">Crear marca</button>
     </form>
   </div>
 </div>
