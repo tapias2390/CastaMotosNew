@@ -6,11 +6,13 @@ use App\Infrastructure\Http\Router;
 use App\Presentation\Controllers\AddressController;
 use App\Presentation\Controllers\AdminInventoryController;
 use App\Presentation\Controllers\AdminOrderController;
+use App\Presentation\Controllers\AdminReservationController;
 use App\Presentation\Controllers\AuthController;
 use App\Presentation\Controllers\BrandController;
 use App\Presentation\Controllers\CartController;
 use App\Presentation\Controllers\CategoryController;
 use App\Presentation\Controllers\CheckoutController;
+use App\Presentation\Controllers\DashboardController;
 use App\Presentation\Controllers\FavoriteController;
 use App\Presentation\Controllers\HealthController;
 use App\Presentation\Controllers\MediaController;
@@ -120,6 +122,8 @@ $router->get('api/orders/{orderNumber}', [CheckoutController::class, 'show'], [n
 $router->get('api/admin/orders', [AdminOrderController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 $router->get('api/admin/orders/{orderNumber}', [AdminOrderController::class, 'show'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 $router->put('api/admin/orders/{orderNumber}/status', [AdminOrderController::class, 'updateStatus'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
+$router->get('api/admin/reservations', [AdminReservationController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
+$router->get('api/admin/dashboard/summary', [DashboardController::class, 'summary'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 
 $router->get('api/admin/inventory', [AdminInventoryController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);
 $router->get('api/admin/inventory/movements', [AdminInventoryController::class, 'movements'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-inventory')]);

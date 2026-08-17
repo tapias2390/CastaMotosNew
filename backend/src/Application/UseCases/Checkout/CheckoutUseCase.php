@@ -71,6 +71,8 @@ final class CheckoutUseCase
                 'quantity' => $item['quantity'],
                 'unit_price' => $item['unit_price'],
                 'subtotal' => round($item['unit_price'] * $item['quantity'], 2),
+                // Reserva del servicio (sección 12) — null en items de producto.
+                'scheduled_at' => $item['scheduled_at'] ?? null,
             ];
         }, $items);
 
@@ -109,6 +111,12 @@ final class CheckoutUseCase
             if ($item['quantity_exceeds_stock']) {
                 throw new ValidationException('No fue posible confirmar el pedido.', [
                     'cart' => ["\"{$item['name']}\" ya no tiene stock suficiente."],
+                ]);
+            }
+
+            if ($item['type'] === 'service' && empty($item['scheduled_at'])) {
+                throw new ValidationException('No fue posible confirmar el pedido.', [
+                    'cart' => ["\"{$item['name']}\" no tiene fecha y hora agendada."],
                 ]);
             }
         }

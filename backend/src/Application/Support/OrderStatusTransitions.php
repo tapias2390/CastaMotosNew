@@ -33,6 +33,20 @@ final class OrderStatusTransitions
         return in_array($to, self::GRAPH[$from] ?? [], true);
     }
 
+    /**
+     * Estados a los que se puede avanzar desde uno dado (sección 22). Lo usa
+     * el panel admin para mostrar solo la(s) acción(es) siguiente(s) del
+     * pedido en vez de un selector con TODOS los estados posibles —
+     * la máquina de estados ya sabe cuáles son válidos, no hace falta
+     * duplicar esa lógica en el frontend.
+     *
+     * @return string[]
+     */
+    public static function nextStates(string $from): array
+    {
+        return self::GRAPH[$from] ?? [];
+    }
+
     public static function isTerminal(string $status): bool
     {
         return in_array($status, self::TERMINAL, true);

@@ -210,10 +210,10 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
         $stmt = $this->connection->prepare(
             'INSERT INTO services (
                 store_id, category_id, professional_user_id, name, slug, description, price,
-                duration_minutes, location, schedule, availability, cancellation_policy, status
+                duration_minutes, location, latitude, longitude, schedule, availability, cancellation_policy, status
             ) VALUES (
                 :store_id, :category_id, :professional_user_id, :name, :slug, :description, :price,
-                :duration_minutes, :location, :schedule, :availability, :cancellation_policy, :status
+                :duration_minutes, :location, :latitude, :longitude, :schedule, :availability, :cancellation_policy, :status
             )'
         );
         $stmt->execute($this->bindings($data));
@@ -227,8 +227,8 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
             'UPDATE services SET
                 store_id = :store_id, category_id = :category_id, professional_user_id = :professional_user_id,
                 name = :name, slug = :slug, description = :description, price = :price,
-                duration_minutes = :duration_minutes, location = :location, schedule = :schedule,
-                availability = :availability, cancellation_policy = :cancellation_policy, status = :status
+                duration_minutes = :duration_minutes, location = :location, latitude = :latitude, longitude = :longitude,
+                schedule = :schedule, availability = :availability, cancellation_policy = :cancellation_policy, status = :status
              WHERE id = :id'
         );
         $stmt->execute($this->bindings($data) + ['id' => $id]);
@@ -246,6 +246,8 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
             'price' => $data['price'],
             'duration_minutes' => $data['duration_minutes'] ?? null,
             'location' => $data['location'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
             'schedule' => isset($data['schedule']) ? json_encode($data['schedule']) : null,
             'availability' => isset($data['availability']) ? json_encode($data['availability']) : null,
             'cancellation_policy' => $data['cancellation_policy'] ?? null,
@@ -255,8 +257,27 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
 
     public function delete(int $id): void
     {
+        // Las fotos no quedan huérfanas: se borran sus archivos físicos y sus
+        // filas ANTES del soft-delete del servicio (mismo criterio que
+        // deleteImage() — sección 44). El servicio en sí solo se marca
+        // deleted_at (recuperable en BD si hiciera falta), pero sus imágenes
+        // no tendrían ningún lugar donde volver a mostrarse.
+        $images = $this->imagesOf($id);
+        foreach ($images as $image) {
+            FileStorage::delete((string) Config::get('app.base_path') . '/storage/uploads/services', (string) $image['url']);
+        }
+        $this->connection->prepare('DELETE FROM service_images WHERE service_id = :id')->execute(['id' => $id]);
+
         $stmt = $this->connection->prepare('UPDATE services SET deleted_at = NOW() WHERE id = :id');
         $stmt->execute(['id' => $id]);
+    }
+
+    public function countImages(int $serviceId): int
+    {
+        $stmt = $this->connection->prepare('SELECT COUNT(*) FROM service_images WHERE service_id = :id');
+        $stmt->execute(['id' => $serviceId]);
+
+        return (int) $stmt->fetchColumn();
     }
 
     public function addImage(int $serviceId, string $path): int

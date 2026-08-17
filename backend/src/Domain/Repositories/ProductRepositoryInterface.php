@@ -32,6 +32,8 @@ interface ProductRepositoryInterface
     // --- Imágenes ---
     public function addImage(int $productId, string $path, bool $isPrimary): int;
 
+    public function countImages(int $productId): int;
+
     public function deleteImage(int $imageId): void;
 
     public function imageBelongsToProduct(int $imageId, int $productId): bool;

@@ -57,19 +57,28 @@ function cartLineMarkup(item) {
       ? `<p class="form-error">Solo quedan ${item.available_stock} disponibles.</p>`
       : '';
 
-  return `
-    <div class="cart-line" data-item-id="${item.id}">
-      <div class="cart-line__image">${image ? `<img src="${image}" alt="">` : ''}</div>
-      <div class="cart-line__info">
-        <div>${helpers.escapeHtml(item.name)}</div>
-        <div style="color:var(--amarillo);font-weight:700;">${helpers.formatCurrency(item.unit_price)}</div>
-        ${warning}
-      </div>
+  // Un servicio es una reserva para un horario concreto (sección 12): no
+  // tiene sentido subir/bajar cantidad como con un producto, solo eliminar.
+  const qtyControl = item.type === 'service'
+    ? '<span style="font-size:0.8rem;color:var(--gris-texto);">1 reserva</span>'
+    : `
       <div class="cart-line__qty">
         <button data-action="decrease" aria-label="Disminuir">−</button>
         <input type="number" min="1" value="${item.quantity}" data-role="quantity">
         <button data-action="increase" aria-label="Aumentar">+</button>
       </div>
+    `;
+
+  return `
+    <div class="cart-line" data-item-id="${item.id}">
+      <div class="cart-line__image">${image ? `<img src="${image}" alt="">` : ''}</div>
+      <div class="cart-line__info">
+        <div>${helpers.escapeHtml(item.name)}</div>
+        ${item.scheduled_at ? `<div style="font-size:0.78rem;color:var(--gris-texto);">📅 ${helpers.formatDateTime(item.scheduled_at)}</div>` : ''}
+        <div style="color:var(--amarillo);font-weight:700;">${helpers.formatCurrency(item.unit_price)}</div>
+        ${warning}
+      </div>
+      ${qtyControl}
       <button class="icon-btn" data-action="remove" aria-label="Eliminar">🗑</button>
     </div>
   `;
@@ -80,15 +89,19 @@ function wireCartLineEvents() {
     const itemId = line.dataset.itemId;
     const input = line.querySelector('[data-role="quantity"]');
 
-    line.querySelector('[data-action="increase"]').addEventListener('click', () => updateCartLine(itemId, Number(input.value) + 1));
-    line.querySelector('[data-action="decrease"]').addEventListener('click', () => {
-      const next = Number(input.value) - 1;
-      if (next >= 1) updateCartLine(itemId, next);
-    });
-    input.addEventListener('change', () => {
-      const next = Number(input.value);
-      if (next >= 1) updateCartLine(itemId, next);
-    });
+    // Los items de servicio no tienen controles de cantidad (ver cartLineMarkup).
+    if (input) {
+      line.querySelector('[data-action="increase"]').addEventListener('click', () => updateCartLine(itemId, Number(input.value) + 1));
+      line.querySelector('[data-action="decrease"]').addEventListener('click', () => {
+        const next = Number(input.value) - 1;
+        if (next >= 1) updateCartLine(itemId, next);
+      });
+      input.addEventListener('change', () => {
+        const next = Number(input.value);
+        if (next >= 1) updateCartLine(itemId, next);
+      });
+    }
+
     line.querySelector('[data-action="remove"]').addEventListener('click', () => removeCartLine(itemId));
   });
 }

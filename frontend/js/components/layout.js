@@ -207,11 +207,17 @@ function initAuthModalEvents() {
     errorBox.textContent = '';
 
     try {
-      await authService.login(
+      const data = await authService.login(
         document.getElementById('login-email').value,
         document.getElementById('login-password').value
       );
-      window.location.reload();
+      // El admin entra directo al panel (sección 28): no tiene sentido que
+      // inicie sesión y vuelva a ver la página pública que estaba mirando.
+      if (isAdminUser(data.user) && !window.location.pathname.replace(/\/$/, '').endsWith('/admin')) {
+        window.location.href = 'admin';
+      } else {
+        window.location.reload();
+      }
     } catch (error) {
       errorBox.textContent = error.message;
     }

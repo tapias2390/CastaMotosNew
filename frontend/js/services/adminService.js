@@ -13,4 +13,11 @@ const adminService = {
   inventory: (filters = {}) => apiService.get('/admin/inventory' + catalogService.toQueryString(filters)),
   adjustInventory: (productId, payload) => apiService.post(`/admin/inventory/${productId}/adjust`, payload),
   movements: (filters = {}) => apiService.get('/admin/inventory/movements' + catalogService.toQueryString(filters)),
+
+  // Reservas de servicios (sección 12) — cada una ES un pedido con servicio
+  // agendado; el cambio de estado reutiliza updateOrderStatus() de arriba.
+  reservations: (filters = {}) => apiService.get('/admin/reservations' + catalogService.toQueryString(filters)),
+
+  // Resumen del negocio para la pestaña "Resumen" (sección 28).
+  dashboardSummary: () => apiService.get('/admin/dashboard/summary'),
 };

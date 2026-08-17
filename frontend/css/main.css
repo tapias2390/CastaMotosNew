@@ -46,21 +46,25 @@
 }
 
 /* Tema claro: mismo negro/amarillo de marca, superficies e inversión de texto
-   claras. --negro se mantiene fijo (sigue siendo el texto sobre amarillo/blanco). */
+   claras. --negro se mantiene fijo (sigue siendo el texto sobre amarillo/blanco).
+   Grises NEUTROS (no beige) sobre fondo gris claro y tarjetas blanco puro —
+   la estructura de color que usan los marketplaces grandes en su modo claro
+   (fondo de página gris, tarjetas blancas, texto casi negro), aplicada con
+   nuestra propia paleta negro/amarillo encima. */
 [data-theme="light"] {
-  --fondo: #f7f6f3;
-  --negro-suave: #eeece6;
+  --fondo: #ebebeb;
+  --negro-suave: #f5f5f5;
   --gris-oscuro: #ffffff;
-  --gris-borde: #e0ddd3;
-  --gris-borde-fuerte: #c9c5b8;
-  --gris-texto: #5b5a54;
-  --gris-texto-tenue: #8a8880;
-  --blanco: #14130f;
-  --superficie-imagen: #f1efe8;
-  --sombra: 0 4px 16px rgba(20, 19, 15, 0.1);
-  --sombra-card: 0 1px 3px rgba(20, 19, 15, 0.12);
-  --sombra-card-hover: 0 12px 28px rgba(20, 19, 15, 0.16);
-  --sombra-header: 0 2px 12px rgba(20, 19, 15, 0.1);
+  --gris-borde: #e3e3e3;
+  --gris-borde-fuerte: #cccccc;
+  --gris-texto: #636363;
+  --gris-texto-tenue: #949494;
+  --blanco: #1a1a1a;
+  --superficie-imagen: #ffffff;
+  --sombra: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --sombra-card: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --sombra-card-hover: 0 8px 24px rgba(0, 0, 0, 0.14);
+  --sombra-header: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 * { box-sizing: border-box; }
@@ -209,6 +213,8 @@ input, select, textarea { font-family: inherit; }
    verde de marca de WhatsApp ni ningún otro color de identidad de terceros). */
 .btn-whatsapp { background: var(--exito); color: var(--blanco); }
 .btn-whatsapp:hover { filter: brightness(1.1); }
+.btn-danger { background: transparent; color: var(--error); border-color: var(--error); }
+.btn-danger:hover { background: var(--error-fondo); }
 .btn-block { width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
@@ -280,6 +286,81 @@ input, select, textarea { font-family: inherit; }
 }
 .hero h1 { color: var(--amarillo); font-size: clamp(1.6rem, 4vw, 2.5rem); margin: 0 0 8px; letter-spacing: -0.3px; }
 .hero p { color: var(--gris-texto); margin: 0; }
+
+/* Carrusel de destacados del home (sección 41) — fotos reales de productos
+   con descuento/novedad, nunca una promoción inventada (ver home.js). */
+.hero-carousel {
+  position: relative;
+  border-radius: var(--radio-lg);
+  overflow: hidden;
+  aspect-ratio: 21 / 9;
+  background: var(--superficie-imagen);
+  box-shadow: var(--sombra-card);
+  margin: 24px 0;
+}
+@media (max-width: 640px) { .hero-carousel { aspect-ratio: 4 / 3; } }
+
+.hero-carousel__track { position: relative; width: 100%; height: 100%; }
+.hero-carousel__slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease;
+  display: block;
+}
+.hero-carousel__slide.is-active { opacity: 1; visibility: visible; }
+.hero-carousel__slide img { width: 100%; height: 100%; object-fit: cover; }
+
+.hero-carousel__caption {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 32px 24px 20px;
+  background: linear-gradient(0deg, rgba(13, 13, 13, 0.85), rgba(13, 13, 13, 0));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hero-carousel__title { color: #ffffff; font-size: 1.2rem; font-weight: 800; }
+.hero-carousel__subtitle { color: var(--amarillo-suave); font-size: 0.95rem; font-weight: 700; }
+
+.hero-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(13, 13, 13, 0.55);
+  color: #ffffff;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+  transition: background 0.15s ease;
+}
+.hero-carousel__arrow:hover { background: rgba(13, 13, 13, 0.8); }
+.hero-carousel__arrow--prev { left: 12px; }
+.hero-carousel__arrow--next { right: 12px; }
+
+.hero-carousel__dots {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+}
+.hero-carousel__dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.hero-carousel__dot.is-active { background: var(--amarillo); transform: scale(1.3); }
 
 /* Banner promocional (sección 41: "Banner promocional") — solo mensaje de
    marca propio, nunca una oferta o cuenta regresiva inventada. */
@@ -366,7 +447,12 @@ input, select, textarea { font-family: inherit; }
 }
 .card__rating { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--gris-texto-tenue); }
 .card__rating .stars { color: var(--amarillo); letter-spacing: 1px; }
-.card__price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+/* margin-top:auto ancla el precio (y todo lo que va después: insignia de
+   stock, marca/ubicación) al fondo de la tarjeta — así el precio queda a la
+   misma altura en toda la fila del grid, sin importar si el nombre ocupa
+   una o dos líneas, o si hay calificación/marca arriba o no (sección "todo
+   uniforme"). Requiere que .card__body sea flex column (ya lo es). */
+.card__price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
 .card__price { font-weight: 800; color: var(--blanco); font-size: 1.2rem; letter-spacing: -0.3px; }
 .card__price-old { color: var(--gris-texto-tenue); text-decoration: line-through; font-size: 0.78rem; font-weight: 400; }
 .card__meta { font-size: 0.75rem; color: var(--gris-texto); }
@@ -607,7 +693,10 @@ input, select, textarea { font-family: inherit; }
 
 /* La galería necesita position:relative como ancla para el panel de zoom
    (que se posiciona a su derecha) — ver .gallery-zoom-panel más abajo. */
-.detail-gallery { position: relative; }
+/* Tamaño fijo/acotado (sección "todo uniforme"): sin este límite, la imagen
+   ocupaba toda la columna del grid (hasta ~580px en pantallas anchas, mucho
+   más grande que cualquier foto de producto de un marketplace real). */
+.detail-gallery { position: relative; max-width: 460px; }
 
 .detail-gallery__main {
   position: relative;
@@ -784,12 +873,168 @@ input, select, textarea { font-family: inherit; }
 }
 
 /* --- Panel administrativo (Fase 6) --- */
-.admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--gris-borde); }
-.admin-tab {
-  background: none; border: none; color: var(--gris-texto); padding: 10px 18px;
-  font-weight: 700; font-size: 0.9rem; border-bottom: 3px solid transparent;
+/* --- Panel admin: layout con barra lateral --- */
+.admin-shell {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - var(--header-height));
 }
-.admin-tab.is-active { color: var(--amarillo); border-bottom-color: var(--amarillo); }
+
+.admin-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--gris-oscuro);
+  border-right: 1px solid var(--gris-borde);
+  position: sticky;
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
+  display: flex;
+  flex-direction: column;
+  padding-top: 8px;
+}
+.admin-sidebar__header { display: none; }
+.admin-sidebar__nav { display: flex; flex-direction: column; gap: 2px; padding: 8px; }
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  border-radius: var(--radio-sm);
+  color: var(--gris-texto);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.admin-nav-link span { font-size: 1.05rem; }
+.admin-nav-link:hover { background: var(--negro-suave); color: var(--blanco); transform: translateX(2px); }
+.admin-nav-link.is-active { background: var(--negro-suave); color: var(--amarillo); }
+
+.admin-content { flex: 1; min-width: 0; padding: 0 24px 40px; }
+
+/* Solo aparece en pantallas angostas (ver media query) */
+.admin-drawer-toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 16px 0;
+  background: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  color: var(--blanco);
+  padding: 10px 16px;
+  border-radius: var(--radio-sm);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.admin-drawer-backdrop { display: none; }
+
+@media (max-width: 900px) {
+  .admin-drawer-toggle { display: inline-flex; }
+  .admin-content { padding: 0 16px 40px; }
+
+  .admin-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 260px;
+    z-index: 250;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: var(--sombra);
+  }
+  .admin-sidebar.is-open { transform: translateX(0); }
+  .admin-sidebar__header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--gris-borde); margin-bottom: 8px;
+  }
+  .admin-sidebar__brand { font-weight: 800; color: var(--amarillo); }
+  .admin-sidebar__close { background: none; border: none; color: var(--gris-texto); font-size: 1.2rem; cursor: pointer; }
+
+  .admin-drawer-backdrop {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(13, 13, 13, 0.55);
+    z-index: 240;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .admin-drawer-backdrop.is-open { opacity: 1; pointer-events: auto; }
+}
+
+/* Animación de entrada al cambiar de sección (sección "moderna, animada") */
+@keyframes adminPanelIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.admin-panel-enter { animation: adminPanelIn 0.35s ease; }
+
+/* --- Dashboard "Resumen" (sección 28) --- */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-lg);
+  padding: 16px 18px;
+  box-shadow: var(--sombra-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--sombra-card-hover); }
+.stat-card__icon {
+  width: 42px; height: 42px; border-radius: var(--radio);
+  background: var(--negro-suave);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.stat-card__value { font-size: 1.3rem; font-weight: 800; color: var(--blanco); line-height: 1.2; }
+.stat-card__label { font-size: 0.75rem; color: var(--gris-texto); }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 900px) { .dashboard-grid { grid-template-columns: 1.4fr 1fr; } }
+
+.dashboard-panel {
+  background: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-lg);
+  padding: 18px 20px;
+  box-shadow: var(--sombra-card);
+}
+.dashboard-panel h3 { margin: 0 0 14px; font-size: 0.95rem; color: var(--amarillo); }
+
+.chart-bars { width: 100%; height: 180px; }
+.chart-bar { fill: var(--amarillo); transition: fill 0.15s ease; }
+.chart-bar:hover { fill: var(--amarillo-oscuro); }
+.chart-axis-label { fill: var(--gris-texto); font-size: 6px; }
+
+.status-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 0.8rem; }
+.status-bar-row__label { width: 110px; flex-shrink: 0; color: var(--gris-texto); }
+.status-bar-row__track { flex: 1; height: 10px; background: var(--negro-suave); border-radius: 999px; overflow: hidden; }
+.status-bar-row__fill { height: 100%; background: var(--amarillo); border-radius: 999px; transition: width 0.5s ease; }
+.status-bar-row__count { width: 26px; text-align: right; font-weight: 700; color: var(--blanco); }
+
+.top-products-list { list-style: none; margin: 0; padding: 0; }
+.top-products-list li {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--gris-borde); font-size: 0.85rem;
+}
+.top-products-list li:last-child { border-bottom: none; }
+.top-products-list .rank { color: var(--amarillo); font-weight: 800; margin-right: 8px; }
 
 .admin-table-wrap { overflow-x: auto; border: 1px solid var(--gris-borde); border-radius: var(--radio); }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 640px; }

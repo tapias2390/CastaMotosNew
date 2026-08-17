@@ -31,6 +31,46 @@ async function loadHomeCategories() {
   }
 }
 
+/**
+ * Carrusel de fotos reales al inicio: primero intenta con productos en
+ * oferta de verdad (discount_percentage > 0); si no hay ninguno todavía,
+ * cae a los más nuevos — nunca se inventa una promoción ni se deja un
+ * carrusel vacío si hay CUALQUIER producto real para mostrar.
+ */
+async function loadHeroCarousel() {
+  const mount = document.getElementById('home-carousel-mount');
+  if (!mount) return;
+
+  try {
+    let result = await catalogService.products({ on_sale: 1, per_page: 6 });
+    if (result.data.length === 0) {
+      result = await catalogService.products({ sort: 'newest', per_page: 6 });
+    }
+    if (result.data.length === 0) return; // sin catálogo todavía: no hay nada real que mostrar
+
+    const slides = result.data
+      .filter((product) => product.primary_image || product.image)
+      .map((product) => {
+        const hasDiscount = product.previous_price && Number(product.previous_price) > Number(product.price);
+        return {
+          image: helpers.mediaUrl('products', product.primary_image || product.image),
+          title: product.name,
+          subtitle: hasDiscount
+            ? `${helpers.formatCurrency(product.price)} · antes ${helpers.formatCurrency(product.previous_price)}`
+            : helpers.formatCurrency(product.price),
+          href: `producto/${encodeURIComponent(product.slug)}`,
+        };
+      });
+
+    if (slides.length === 0) return;
+
+    mount.innerHTML = carouselMarkup('home-carousel', slides);
+    initCarousel('home-carousel');
+  } catch (error) {
+    console.error('No fue posible cargar el carrusel de destacados.', error);
+  }
+}
+
 async function loadDeals() {
   const section = document.getElementById('home-deals-section');
   const mount = document.getElementById('home-deals');
@@ -100,6 +140,7 @@ function wireHomeSearch() {
 
 document.addEventListener('DOMContentLoaded', () => {
   wireHomeSearch();
+  loadHeroCarousel();
   loadHomeCategories();
   loadDeals();
   loadFeaturedProducts();

@@ -22,10 +22,15 @@ function serviceImageUrls(service) {
     : [];
 }
 
-/** Enlace real a Google Maps con la dirección tal como la escribió el vendedor
- * (sin geocodificar ni inventar coordenadas) — "sección cómo llegar". */
-function directionsLink(location) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+/** Enlace real a Google Maps — "sección cómo llegar". Si el servicio tiene
+ * latitud/longitud cargadas (opcional, ver panel admin), apunta al punto
+ * exacto; si no, cae a buscar la dirección de texto tal como la escribió
+ * el vendedor. Nunca se geocodifica ni se inventan coordenadas. */
+function directionsLink(service) {
+  if (service.latitude != null && service.longitude != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${service.latitude},${service.longitude}`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.location)}`;
 }
 
 function renderServiceDetail(service) {
@@ -49,12 +54,26 @@ function renderServiceDetail(service) {
         ${service.location ? `
           <p style="color:var(--gris-texto);">
             📍 ${helpers.escapeHtml(service.location)}
-            — <a href="${directionsLink(service.location)}" target="_blank" rel="noopener" style="color:var(--amarillo);">Cómo llegar</a>
+            — <a href="${directionsLink(service)}" target="_blank" rel="noopener" style="color:var(--amarillo);">Cómo llegar</a>
           </p>
         ` : ''}
 
-        <button class="btn btn-primary" id="add-service-to-cart-btn">Agregar al carrito</button>
-        <button class="btn btn-secondary" id="service-favorite-btn">
+        <div class="purchase-box mt-16">
+          <p style="font-weight:700;margin:0 0 10px;">📅 Reservar este servicio</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reservation-date">Fecha</label>
+              <input type="date" class="form-control" id="reservation-date">
+            </div>
+            <div class="form-group">
+              <label for="reservation-time">Hora</label>
+              <input type="time" class="form-control" id="reservation-time">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block" id="add-service-to-cart-btn">Agendar servicio</button>
+        </div>
+
+        <button class="btn btn-secondary mt-16" id="service-favorite-btn">
           ${service.is_favorite ? '♥ En favoritos' : '♡ Agregar a favoritos'}
         </button>
 
@@ -74,10 +93,21 @@ function renderServiceDetail(service) {
 
   initGallery360(serviceImageUrls(service));
 
+  // La fecha mínima seleccionable es hoy — no tiene sentido agendar en el pasado.
+  document.getElementById('reservation-date').min = new Date().toISOString().slice(0, 10);
+
   document.getElementById('add-service-to-cart-btn').addEventListener('click', async () => {
+    const date = document.getElementById('reservation-date').value;
+    const time = document.getElementById('reservation-time').value;
+
+    if (!date || !time) {
+      helpers.toast('Elige una fecha y una hora para agendar el servicio.', 'error');
+      return;
+    }
+
     try {
-      await cartService.addItem({ service_id: service.id, quantity: 1 });
-      helpers.toast('Servicio agregado al carrito.', 'success');
+      await cartService.addItem({ service_id: service.id, quantity: 1, scheduled_at: `${date} ${time}:00` });
+      helpers.toast('Servicio agendado y agregado al carrito.', 'success');
       refreshCartBadge();
     } catch (error) {
       helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');

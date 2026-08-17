@@ -24,6 +24,8 @@ interface ServiceRepositoryInterface
 
     public function addImage(int $serviceId, string $path): int;
 
+    public function countImages(int $serviceId): int;
+
     public function deleteImage(int $imageId): void;
 
     public function imageBelongsToService(int $imageId, int $serviceId): bool;

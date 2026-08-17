@@ -76,6 +76,8 @@ return [
         'catalog_image_max_size_kb' => (int) ($_ENV['CATALOG_IMAGE_MAX_SIZE_KB'] ?? 4096),
         'catalog_image_allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp'],
         'catalog_image_allowed_extensions' => ['jpg', 'jpeg', 'png', 'webp'],
+        // Máximo de fotos por producto/servicio (compartido entre los dos catálogos).
+        'max_images_per_catalog_item' => (int) ($_ENV['MAX_IMAGES_PER_CATALOG_ITEM'] ?? 6),
     ],
 
     'admin' => [

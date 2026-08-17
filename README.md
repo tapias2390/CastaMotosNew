@@ -21,7 +21,7 @@ composer install
 1. Copiar `backend/.env.example` a `backend/.env` (ya existe un `.env` con valores por defecto para este entorno local; **no se sube al repositorio**).
 2. Ajustar credenciales si es necesario (por defecto: `root` sin contraseña, como en una instalación estándar de XAMPP).
 
-Variables principales (ver `backend/.env.example` para el listado completo): `APP_ENV`, `APP_URL`, `DB_*`, `JWT_SECRET`, `AUTH_*` (intentos de login, bloqueo, TTL de verificación/recuperación), `MAIL_*`, `PAYMENT_*`, `AI_*`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`, `CONTACT_WHATSAPP_NUMBER` (número real del negocio, formato internacional sin "+" ni espacios, ej. `573001234567`; vacío por defecto — mientras lo esté, el botón de WhatsApp del frontend permanece oculto en vez de mostrar un número inventado).
+Variables principales (ver `backend/.env.example` para el listado completo): `APP_ENV`, `APP_URL`, `DB_*`, `JWT_SECRET`, `AUTH_*` (intentos de login, bloqueo, TTL de verificación/recuperación), `MAIL_*`, `PAYMENT_*`, `AI_*`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`, `CONTACT_WHATSAPP_NUMBER` (número real del negocio, formato internacional sin "+" ni espacios, ej. `573001234567`; vacío por defecto — mientras lo esté, el botón de WhatsApp del frontend permanece oculto en vez de mostrar un número inventado), `MAX_IMAGES_PER_CATALOG_ITEM` (máximo de fotos por producto/servicio, 6 por defecto, validado en el backend).
 
 ### Correo en desarrollo local
 
@@ -68,7 +68,7 @@ Con Apache y MySQL corriendo desde el panel de control de XAMPP, y el proyecto u
 | `/carrito` | Carrito (funciona sin sesión, vía `X-Cart-Token`) |
 | `/checkout` | Dirección → método de entrega → método de pago → confirmar |
 | `/pedido/{numero}` | Confirmación del pedido creado |
-| `/admin` | Panel básico (Fase 6): pedidos (cambiar estado), inventario (ver stock/reservado/disponible, ajustar), **Servicios** y **Productos** (crear/editar/eliminar, con fotos y giro 360°). Cada pestaña requiere su propio permiso (`manage-orders`/`manage-inventory`/`manage-services`/`manage-products`). |
+| `/admin` | Panel con barra lateral (cajón deslizable en móvil): **Resumen** (ingresos, gráficas, top productos), pedidos (un botón por acción válida según la máquina de estados), **Reservas** (servicios agendados, ordenados por fecha), inventario, **Servicios** y **Productos** (crear/editar/eliminar, hasta 6 fotos c/u con giro 360°, servicios con latitud/longitud opcional). Cada sección requiere su propio permiso (`manage-orders`/`manage-inventory`/`manage-services`/`manage-products`). Un admin que inicia sesión entra directo aquí. |
 
 Login/registro están en un modal accesible desde el botón del header en cualquier página (`frontend/js/components/layout.js`). Es HTML/CSS/JS plano sin build step (sección 39: "librerías JS solo cuando aporten valor real"); todas las rutas amigables se resuelven en el `.htaccess` de la raíz hacia los archivos estáticos de `frontend/pages/`.
 
@@ -136,7 +136,7 @@ Las rutas marcadas con 🔒 requieren `Authorization: Bearer <token>` (JWT obten
 | DELETE 🔒 | `/api/favorites/{type}/{id}` | Quitar favorito. |
 | GET 🔒 | `/api/favorites/check?type=&id=` | `{ is_favorite: bool }`. |
 | GET | `/api/cart` | Carrito actual (invitado vía header `X-Cart-Token`, o del usuario si hay JWT). |
-| POST | `/api/cart/items` | Agregar `{ product_id\|service_id, quantity }`. |
+| POST | `/api/cart/items` | Agregar `{ product_id\|service_id, quantity, scheduled_at? }`. `scheduled_at` es obligatorio si es `service_id` (sección 12: reserva) — se re-verifica que el horario siga libre recién al confirmar el checkout. |
 | PUT | `/api/cart/items/{itemId}` | Cambiar cantidad. |
 | DELETE | `/api/cart/items/{itemId}` | Quitar ítem. |
 | DELETE | `/api/cart` | Vaciar carrito. |
@@ -146,6 +146,8 @@ Las rutas marcadas con 🔒 requieren `Authorization: Bearer <token>` (JWT obten
 | GET 🔒 | `/api/admin/orders` | Listar pedidos (`manage-orders`), filtro `status`. |
 | GET 🔒 | `/api/admin/orders/{orderNumber}` | Detalle de cualquier pedido (`manage-orders`). |
 | PUT 🔒 | `/api/admin/orders/{orderNumber}/status` | Cambiar estado `{ status, comment? }` (`manage-orders`), valida la transición. |
+| GET 🔒 | `/api/admin/reservations` | Servicios agendados (`manage-orders`), filtros `date`, `status`, `upcoming_only`. Cambiar su estado usa el endpoint de pedidos de arriba. |
+| GET 🔒 | `/api/admin/dashboard/summary` | Resumen del negocio (`manage-orders`): ingresos, pedidos por estado, serie de 14 días, top productos, stock bajo, reservas próximas. |
 | GET 🔒 | `/api/admin/inventory` | Stock/reservado/disponible por producto (`manage-inventory`), filtros `search`, `low_stock`. |
 | POST 🔒 | `/api/admin/inventory/{productId}/adjust` | Ajuste manual `{ type: in\|out\|adjustment, quantity, reason }` (`manage-inventory`). |
 | GET 🔒 | `/api/admin/inventory/movements` | Historial de movimientos, filtro `product_id` opcional (`manage-inventory`). |

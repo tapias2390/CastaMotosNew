@@ -53,7 +53,7 @@ final class CartController
         $cart = $this->resolveCart($request);
 
         (new AddCartItemUseCase($this->carts, $this->products, $this->services))
-            ->handle((int) $cart['id'], $productId, $serviceId, (int) $data['quantity']);
+            ->handle((int) $cart['id'], $productId, $serviceId, (int) $data['quantity'], $data['scheduled_at'] ?? null);
 
         Response::success($this->buildCartResponse($cart), 'Producto agregado al carrito.', 201);
     }

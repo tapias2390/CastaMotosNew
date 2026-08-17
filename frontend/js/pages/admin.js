@@ -3,12 +3,9 @@
  * real está en la API (JWT + manage-orders/manage-inventory); aquí solo se
  * oculta el contenido si la petición falla con 401/403, para una UX clara.
  */
-const ALL_STATUSES = [
-  'PENDIENTE', 'CONFIRMADO', 'PAGO_PENDIENTE', 'PAGO_CONFIRMADO',
-  'PREPARANDO', 'EN_CAMINO', 'ENTREGADO', 'CANCELADO', 'DEVUELTO',
-];
 const GOOD_FINAL = ['ENTREGADO'];
 const BAD_FINAL = ['CANCELADO', 'DEVUELTO'];
+const MAX_CATALOG_IMAGES = 6; // debe coincidir con app.uploads.max_images_per_catalog_item (backend/config/app.php)
 
 function statusBadgeClass(status) {
   if (GOOD_FINAL.includes(status)) return 'is-final-good';
@@ -16,17 +13,138 @@ function statusBadgeClass(status) {
   return '';
 }
 
-function wireTabs() {
-  document.querySelectorAll('.admin-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.admin-tab').forEach((t) => t.classList.remove('is-active'));
-      tab.classList.add('is-active');
-      document.getElementById('admin-tab-orders').hidden = tab.dataset.tab !== 'orders';
-      document.getElementById('admin-tab-inventory').hidden = tab.dataset.tab !== 'inventory';
-      document.getElementById('admin-tab-services').hidden = tab.dataset.tab !== 'services';
-      document.getElementById('admin-tab-products').hidden = tab.dataset.tab !== 'products';
+/**
+ * En vez de un selector con TODOS los estados posibles (confuso: ¿cuál sigue?),
+ * un botón por cada estado al que la máquina de estados (sección 22,
+ * OrderStatusTransitions) permite avanzar desde el actual — el backend ya
+ * calcula esa lista (`order.next_statuses`) para no duplicar el grafo aquí.
+ * Cancelar/devolver quedan en rojo y piden confirmación por ser irreversibles.
+ */
+function nextStatusActionsMarkup(nextStatuses) {
+  if (nextStatuses.length === 0) {
+    return '<span style="color:var(--gris-texto-tenue);font-size:0.8rem;">Sin más acciones</span>';
+  }
+
+  return `<div class="flex gap-8" style="flex-wrap:wrap;">${nextStatuses.map((status, index) => {
+    const isDanger = BAD_FINAL.includes(status);
+    const btnClass = isDanger ? 'btn-danger' : (index === 0 ? 'btn-primary' : 'btn-secondary');
+    const confirmAttr = isDanger
+      ? ` data-confirm="¿${helpers.orderActionLabel(status)}? Esta acción no se puede deshacer."`
+      : '';
+
+    return `<button class="btn ${btnClass}" data-action="advance-status" data-status="${status}"${confirmAttr}>${helpers.orderActionLabel(status)}</button>`;
+  }).join('')}</div>`;
+}
+
+const ADMIN_SECTIONS = {
+  dashboard: { title: 'Resumen', hint: 'Cómo va el negocio: ventas, pedidos y lo que necesita tu atención.' },
+  orders: { title: 'Pedidos', hint: 'Cambia el estado de cada pedido con la acción que corresponde según en qué paso está.' },
+  reservations: { title: 'Reservas', hint: 'Servicios agendados por los clientes, ordenados por fecha y hora.' },
+  inventory: { title: 'Inventario', hint: 'Stock disponible por producto y ajustes manuales con trazabilidad.' },
+  services: { title: 'Servicios', hint: 'Crea, edita y elimina los servicios publicados en el catálogo.' },
+  products: { title: 'Productos', hint: 'Crea, edita y elimina los productos publicados en el catálogo.' },
+};
+
+/** Barra lateral (fija en escritorio, cajón deslizable en pantallas angostas). */
+function wireSidebar() {
+  const sidebar = document.getElementById('admin-sidebar');
+  const backdrop = document.getElementById('admin-drawer-backdrop');
+
+  function openDrawer() {
+    sidebar.classList.add('is-open');
+    backdrop.classList.add('is-open');
+  }
+  function closeDrawer() {
+    sidebar.classList.remove('is-open');
+    backdrop.classList.remove('is-open');
+  }
+
+  document.getElementById('admin-drawer-toggle').addEventListener('click', openDrawer);
+  document.getElementById('admin-sidebar-close').addEventListener('click', closeDrawer);
+  backdrop.addEventListener('click', closeDrawer);
+
+  document.querySelectorAll('.admin-nav-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      document.querySelectorAll('.admin-nav-link').forEach((l) => l.classList.remove('is-active'));
+      link.classList.add('is-active');
+
+      const tab = link.dataset.tab;
+      ['dashboard', 'orders', 'reservations', 'inventory', 'services', 'products'].forEach((name) => {
+        const section = document.getElementById(`admin-tab-${name}`);
+        section.hidden = name !== tab;
+        if (name === tab) {
+          // Se reinicia la animación de entrada quitando y volviendo a poner la clase.
+          section.classList.remove('admin-panel-enter');
+          void section.offsetWidth; // fuerza reflow para que el navegador note el cambio
+          section.classList.add('admin-panel-enter');
+        }
+      });
+
+      document.getElementById('admin-section-title').textContent = ADMIN_SECTIONS[tab].title;
+      document.getElementById('admin-section-hint').textContent = ADMIN_SECTIONS[tab].hint;
+
+      closeDrawer();
     });
   });
+}
+
+/**
+ * Resumen del negocio (sección 28): tarjetas de números + dos gráficas
+ * (ingresos por día, pedidos por estado) + top de productos vendidos. Todo
+ * viene calculado del backend con datos reales (DashboardController) —
+ * aquí solo se pinta lo que ya llega listo.
+ */
+async function loadDashboard() {
+  const errorBox = document.getElementById('dashboard-error');
+  errorBox.textContent = '';
+
+  try {
+    const summary = await adminService.dashboardSummary();
+
+    document.getElementById('dashboard-stat-cards').innerHTML = [
+      statCardMarkup('💰', 'Ingresos (30 días)', helpers.formatCurrency(summary.revenue.last_30_days)),
+      statCardMarkup('🧾', 'Pedidos totales', summary.revenue.orders_count),
+      statCardMarkup('🎯', 'Ticket promedio', helpers.formatCurrency(summary.revenue.average_ticket)),
+      statCardMarkup('📅', 'Reservas próximas', summary.upcoming_reservations_count),
+      statCardMarkup('⚠️', 'Productos con stock bajo', summary.low_stock_count),
+      statCardMarkup('🧑‍🤝‍🧑', 'Usuarios nuevos (30 días)', summary.new_users_last_30_days),
+    ].join('');
+
+    document.getElementById('dashboard-revenue-chart').innerHTML = barChartMarkup(
+      summary.revenue_by_day,
+      {
+        valueKey: 'revenue',
+        labelKey: 'date',
+        formatValue: (v) => helpers.formatCurrency(v),
+      }
+    );
+    // Las fechas completas solo se ven en el tooltip (<title>); en el eje X
+    // se muestra únicamente día/mes para que no se amontonen las etiquetas.
+    document.querySelectorAll('#dashboard-revenue-chart .chart-axis-label').forEach((label, i) => {
+      const iso = summary.revenue_by_day[i * (summary.revenue_by_day.length > 10 ? 2 : 1)]?.date;
+      if (iso) label.textContent = iso.slice(5).replace('-', '/');
+    });
+
+    const statusRows = Object.entries(summary.orders_by_status).map(([status, count]) => ({
+      label: helpers.orderStatusLabel(status),
+      value: count,
+    }));
+    document.getElementById('dashboard-status-chart').innerHTML = horizontalBarsMarkup(statusRows);
+
+    const topProductsList = document.getElementById('dashboard-top-products');
+    if (summary.top_products.length === 0) {
+      topProductsList.innerHTML = '<p class="empty-state">Todavía no hay ventas registradas.</p>';
+    } else {
+      topProductsList.innerHTML = summary.top_products.map((product, index) => `
+        <li>
+          <span><span class="rank">#${index + 1}</span>${helpers.escapeHtml(product.name)}</span>
+          <span>${product.units_sold} und. — ${helpers.formatCurrency(product.revenue)}</span>
+        </li>
+      `).join('');
+    }
+  } catch (error) {
+    handleAdminError(error, errorBox);
+  }
 }
 
 async function loadOrders() {
@@ -40,7 +158,7 @@ async function loadOrders() {
     const result = await adminService.orders({ status, per_page: 30 });
 
     if (result.data.length === 0) {
-      body.innerHTML = '<tr><td colspan="7">No hay pedidos con este filtro.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6">No hay pedidos con este filtro.</td></tr>';
       return;
     }
 
@@ -49,27 +167,82 @@ async function loadOrders() {
         <td>${helpers.escapeHtml(order.order_number)}</td>
         <td>${helpers.escapeHtml(order.customer_name)} ${helpers.escapeHtml(order.customer_last_name)}<br><span style="color:var(--gris-texto);">${helpers.escapeHtml(order.customer_email)}</span></td>
         <td>${helpers.formatCurrency(order.total)}</td>
-        <td><span class="status-badge ${statusBadgeClass(order.status)}">${order.status}</span></td>
+        <td><span class="status-badge ${statusBadgeClass(order.status)}">${helpers.orderStatusLabel(order.status)}</span></td>
         <td>${new Date(order.created_at).toLocaleDateString('es-CO')}</td>
-        <td>
-          <select data-role="next-status">
-            ${ALL_STATUSES.filter((s) => s !== order.status).map((s) => `<option value="${s}">${s}</option>`).join('')}
-          </select>
-        </td>
-        <td><button class="btn btn-primary" data-action="update-status">Cambiar</button></td>
+        <td>${nextStatusActionsMarkup(order.next_statuses || [])}</td>
       </tr>
     `).join('');
 
-    body.querySelectorAll('[data-action="update-status"]').forEach((button) => {
+    body.querySelectorAll('[data-action="advance-status"]').forEach((button) => {
       button.addEventListener('click', async () => {
         const row = button.closest('tr');
         const orderNumber = row.dataset.orderNumber;
-        const newStatus = row.querySelector('[data-role="next-status"]').value;
+        const newStatus = button.dataset.status;
+
+        if (button.dataset.confirm && !window.confirm(button.dataset.confirm)) return;
 
         try {
           await adminService.updateOrderStatus(orderNumber, newStatus, null);
-          helpers.toast(`Pedido ${orderNumber} actualizado a ${newStatus}.`, 'success');
+          helpers.toast(`Pedido ${orderNumber}: ${helpers.orderStatusLabel(newStatus)}.`, 'success');
           loadOrders();
+        } catch (error) {
+          helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
+        }
+      });
+    });
+  } catch (error) {
+    handleAdminError(error, errorBox);
+  }
+}
+
+/**
+ * Reservas de servicios (sección 12): cada fila ES un pedido con un servicio
+ * agendado — el cambio de estado reutiliza el mismo endpoint y los mismos
+ * botones "siguiente paso" que la pestaña Pedidos (adminService.updateOrderStatus).
+ */
+async function loadReservations() {
+  const body = document.getElementById('reservations-table-body');
+  const errorBox = document.getElementById('reservations-error');
+  errorBox.textContent = '';
+
+  const filters = {
+    date: document.getElementById('reservations-date-filter').value || undefined,
+    upcoming_only: document.getElementById('reservations-upcoming-only').checked ? 1 : undefined,
+    per_page: 50,
+  };
+
+  try {
+    const result = await adminService.reservations(filters);
+
+    if (result.data.length === 0) {
+      body.innerHTML = '<tr><td colspan="7">No hay reservas con este filtro.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = result.data.map((reservation) => `
+      <tr data-order-number="${reservation.order_number}">
+        <td>${helpers.formatDateTime(reservation.scheduled_at)}</td>
+        <td>${helpers.escapeHtml(reservation.service_name)}</td>
+        <td>${helpers.escapeHtml(reservation.customer_name)} ${helpers.escapeHtml(reservation.customer_last_name)}<br><span style="color:var(--gris-texto);">${helpers.escapeHtml(reservation.customer_email)}</span></td>
+        <td>${reservation.customer_phone ? helpers.escapeHtml(reservation.customer_phone) : '—'}</td>
+        <td>${helpers.escapeHtml(reservation.order_number)}</td>
+        <td><span class="status-badge ${statusBadgeClass(reservation.status)}">${helpers.orderStatusLabel(reservation.status)}</span></td>
+        <td>${nextStatusActionsMarkup(reservation.next_statuses || [])}</td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('[data-action="advance-status"]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const row = button.closest('tr');
+        const orderNumber = row.dataset.orderNumber;
+        const newStatus = button.dataset.status;
+
+        if (button.dataset.confirm && !window.confirm(button.dataset.confirm)) return;
+
+        try {
+          await adminService.updateOrderStatus(orderNumber, newStatus, null);
+          helpers.toast(`Reserva del pedido ${orderNumber}: ${helpers.orderStatusLabel(newStatus)}.`, 'success');
+          loadReservations();
         } catch (error) {
           helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
         }
@@ -223,6 +396,16 @@ async function loadServices() {
   }
 }
 
+/** Actualiza el contador "(x/6)" y deshabilita el input al llegar al máximo
+ * — el tope real lo aplica el backend (ver UploadServiceImageUseCase /
+ * UploadProductImageUseCase), esto es solo para que la UI no invite a
+ * seguir seleccionando fotos que el servidor va a rechazar. */
+function updateImageCounter(prefix) {
+  const count = document.getElementById(`${prefix}-images-list`).children.length;
+  document.getElementById(`${prefix}-images-count`).textContent = `(${count}/${MAX_CATALOG_IMAGES})`;
+  document.getElementById(`${prefix}-image-input`).disabled = count >= MAX_CATALOG_IMAGES;
+}
+
 function renderServiceImageThumb(serviceId, image) {
   const list = document.getElementById('service-images-list');
   const item = document.createElement('div');
@@ -237,12 +420,14 @@ function renderServiceImageThumb(serviceId, image) {
     try {
       await catalogService.deleteServiceImage(serviceId, image.id);
       item.remove();
+      updateImageCounter('service');
     } catch (error) {
       helpers.toast(error.message, 'error');
     }
   });
 
   list.appendChild(item);
+  updateImageCounter('service');
 }
 
 function resetServiceForm() {
@@ -251,6 +436,8 @@ function resetServiceForm() {
   document.getElementById('service-slug').value = '';
   document.getElementById('service-images-list').innerHTML = '';
   document.getElementById('service-images-section').hidden = true;
+  document.getElementById('service-image-input').disabled = false;
+  document.getElementById('service-images-count').textContent = '(0/6)';
   document.getElementById('service-modal-title').textContent = 'Nuevo servicio';
   document.getElementById('service-submit-btn').textContent = 'Crear servicio';
   document.getElementById('service-form-error').textContent = '';
@@ -273,6 +460,8 @@ async function openServiceForm(slug) {
     document.getElementById('service-price').value = service.price;
     document.getElementById('service-duration').value = service.duration_minutes || '';
     document.getElementById('service-location').value = service.location || '';
+    document.getElementById('service-latitude').value = service.latitude ?? '';
+    document.getElementById('service-longitude').value = service.longitude ?? '';
     document.getElementById('service-description').value = service.description || '';
     document.getElementById('service-cancellation').value = service.cancellation_policy || '';
     document.getElementById('service-status').value = service.status;
@@ -300,6 +489,8 @@ function serviceFormPayload() {
     price: document.getElementById('service-price').value,
     duration_minutes: document.getElementById('service-duration').value || undefined,
     location: document.getElementById('service-location').value.trim() || undefined,
+    latitude: document.getElementById('service-latitude').value || undefined,
+    longitude: document.getElementById('service-longitude').value || undefined,
     description: document.getElementById('service-description').value.trim() || undefined,
     cancellation_policy: document.getElementById('service-cancellation').value.trim() || undefined,
     status: document.getElementById('service-status').value,
@@ -311,6 +502,21 @@ function wireServiceManagement() {
   document.getElementById('service-modal-close').addEventListener('click', closeServiceForm);
   document.getElementById('service-modal-overlay').addEventListener('click', (event) => {
     if (event.target === document.getElementById('service-modal-overlay')) closeServiceForm();
+  });
+
+  document.getElementById('service-use-location-btn').addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      helpers.toast('Tu navegador no soporta geolocalización.', 'error');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        document.getElementById('service-latitude').value = position.coords.latitude.toFixed(7);
+        document.getElementById('service-longitude').value = position.coords.longitude.toFixed(7);
+        helpers.toast('Ubicación actual cargada.', 'success');
+      },
+      () => helpers.toast('No fue posible obtener tu ubicación (¿permiso denegado?).', 'error')
+    );
   });
 
   document.getElementById('service-form').addEventListener('submit', async (event) => {
@@ -347,18 +553,28 @@ function wireServiceManagement() {
   });
 
   document.getElementById('service-image-input').addEventListener('change', async (event) => {
-    const file = event.target.files[0];
+    const files = Array.from(event.target.files);
     const serviceId = document.getElementById('service-id').value;
-    if (!file || !serviceId) return;
+    if (files.length === 0 || !serviceId) return;
 
-    try {
-      const image = await catalogService.uploadServiceImage(serviceId, file);
-      renderServiceImageThumb(serviceId, image);
-    } catch (error) {
-      helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
-    } finally {
-      event.target.value = '';
+    const remaining = MAX_CATALOG_IMAGES - document.getElementById('service-images-list').children.length;
+    if (files.length > remaining) {
+      helpers.toast(`Solo se subirán ${remaining} de las ${files.length} fotos seleccionadas (máximo ${MAX_CATALOG_IMAGES} por servicio).`, 'info');
     }
+
+    // Se suben una por una (el endpoint acepta un archivo por petición) — el
+    // orden importa para que el giro 360° siga la secuencia elegida.
+    for (const file of files.slice(0, remaining)) {
+      try {
+        const image = await catalogService.uploadServiceImage(serviceId, file);
+        renderServiceImageThumb(serviceId, image);
+      } catch (error) {
+        helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
+        break;
+      }
+    }
+
+    event.target.value = '';
   });
 }
 
@@ -467,12 +683,14 @@ function renderProductImageThumb(productId, image) {
     try {
       await catalogService.deleteProductImage(productId, image.id);
       item.remove();
+      updateImageCounter('product');
     } catch (error) {
       helpers.toast(error.message, 'error');
     }
   });
 
   list.appendChild(item);
+  updateImageCounter('product');
 }
 
 function resetProductForm() {
@@ -481,6 +699,8 @@ function resetProductForm() {
   document.getElementById('product-slug').value = '';
   document.getElementById('product-images-list').innerHTML = '';
   document.getElementById('product-images-section').hidden = true;
+  document.getElementById('product-image-input').disabled = false;
+  document.getElementById('product-images-count').textContent = '(0/6)';
   document.getElementById('product-stock').disabled = false;
   document.getElementById('product-stock-hint').hidden = true;
   document.getElementById('product-modal-title').textContent = 'Nuevo producto';
@@ -593,20 +813,28 @@ function wireProductManagement() {
   });
 
   document.getElementById('product-image-input').addEventListener('change', async (event) => {
-    const file = event.target.files[0];
+    const files = Array.from(event.target.files);
     const productId = document.getElementById('product-id').value;
-    if (!file || !productId) return;
+    if (files.length === 0 || !productId) return;
 
-    const isFirstImage = document.getElementById('product-images-list').children.length === 0;
-
-    try {
-      const image = await catalogService.uploadProductImage(productId, file, isFirstImage);
-      renderProductImageThumb(productId, { ...image, is_primary: isFirstImage });
-    } catch (error) {
-      helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
-    } finally {
-      event.target.value = '';
+    const remaining = MAX_CATALOG_IMAGES - document.getElementById('product-images-list').children.length;
+    if (files.length > remaining) {
+      helpers.toast(`Solo se subirán ${remaining} de las ${files.length} fotos seleccionadas (máximo ${MAX_CATALOG_IMAGES} por producto).`, 'info');
     }
+
+    for (const file of files.slice(0, remaining)) {
+      const isFirstImage = document.getElementById('product-images-list').children.length === 0;
+
+      try {
+        const image = await catalogService.uploadProductImage(productId, file, isFirstImage);
+        renderProductImageThumb(productId, { ...image, is_primary: isFirstImage });
+      } catch (error) {
+        helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
+        break;
+      }
+    }
+
+    event.target.value = '';
   });
 }
 
@@ -624,7 +852,7 @@ async function initAdminPage() {
     return;
   }
 
-  wireTabs();
+  wireSidebar();
   wireServiceManagement();
   wireProductManagement();
   document.getElementById('orders-status-filter').addEventListener('change', loadOrders);
@@ -632,8 +860,16 @@ async function initAdminPage() {
     event.preventDefault();
     loadInventory();
   });
+  document.getElementById('reservations-date-filter').addEventListener('change', loadReservations);
+  document.getElementById('reservations-upcoming-only').addEventListener('change', loadReservations);
+  document.getElementById('reservations-clear-filter-btn').addEventListener('click', () => {
+    document.getElementById('reservations-date-filter').value = '';
+    loadReservations();
+  });
 
+  loadDashboard();
   loadOrders();
+  loadReservations();
   loadInventory();
   populateServiceCategorySelect();
   loadServices();

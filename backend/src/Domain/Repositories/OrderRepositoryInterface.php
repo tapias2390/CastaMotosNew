@@ -37,6 +37,14 @@ interface OrderRepositoryInterface
      */
     public function findByOrderNumberForAdmin(string $orderNumber): ?array;
 
+    /**
+     * Reservas de servicios (sección 12): items de pedido con servicio
+     * agendado, con datos del cliente y del pedido — cada uno ES una reserva.
+     *
+     * @return array{data: array, total: int, page: int, per_page: int}
+     */
+    public function paginateReservationsForAdmin(array $filters): array;
+
     public function findStatusById(int $orderId): ?string;
 
     /**

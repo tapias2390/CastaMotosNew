@@ -30,6 +30,8 @@
 </section>
 
 <main class="container">
+  <div id="home-carousel-mount"></div>
+
   <div class="promo-banner">
     <div class="promo-banner__text">
       <h2>Todo para tu moto, con envío a todo el país</h2>
@@ -77,6 +79,7 @@
 <script src="frontend/js/services/themeService.js"></script>
 <script src="frontend/js/components/layout.js"></script>
 <script src="frontend/js/components/cards.js"></script>
+<script src="frontend/js/components/carousel.js"></script>
 <script src="frontend/js/pages/home.js"></script>
 </body>
 </html>

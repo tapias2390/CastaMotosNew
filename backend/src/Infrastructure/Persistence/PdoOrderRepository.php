@@ -78,6 +78,31 @@ final class PdoOrderRepository implements OrderRepositoryInterface
                 }
             }
 
+            // Re-verificación autoritativa de disponibilidad del horario (sección 12,
+            // mismo criterio que el stock arriba): otra compra concurrente pudo haber
+            // tomado el mismo horario después de que este carrito lo agendó. Se
+            // excluyen los pedidos CANCELADO — cancelar libera el horario.
+            foreach ($order['items'] as $item) {
+                if ($item['service_id'] === null || empty($item['scheduled_at'])) {
+                    continue;
+                }
+
+                $slotTaken = $this->connection->prepare(
+                    "SELECT 1 FROM order_items oi
+                        INNER JOIN orders o ON o.id = oi.order_id
+                     WHERE oi.service_id = :service_id AND oi.scheduled_at = :scheduled_at
+                        AND o.status != 'CANCELADO'
+                     LIMIT 1 FOR UPDATE"
+                );
+                $slotTaken->execute(['service_id' => $item['service_id'], 'scheduled_at' => $item['scheduled_at']]);
+
+                if ($slotTaken->fetchColumn() !== false) {
+                    throw new ValidationException('No fue posible completar el pedido.', [
+                        'items' => ["El horario elegido para \"{$item['name_snapshot']}\" ya no está disponible."],
+                    ]);
+                }
+            }
+
             $orderStmt = $this->connection->prepare(
                 'INSERT INTO orders (
                     order_number, user_id, address_id, store_id, delivery_method, payment_method_id,
@@ -105,8 +130,8 @@ final class PdoOrderRepository implements OrderRepositoryInterface
             $orderId = (int) $this->connection->lastInsertId();
 
             $itemStmt = $this->connection->prepare(
-                'INSERT INTO order_items (order_id, product_id, service_id, name_snapshot, sku_snapshot, quantity, unit_price, subtotal)
-                 VALUES (:order_id, :product_id, :service_id, :name_snapshot, :sku_snapshot, :quantity, :unit_price, :subtotal)'
+                'INSERT INTO order_items (order_id, product_id, service_id, scheduled_at, name_snapshot, sku_snapshot, quantity, unit_price, subtotal)
+                 VALUES (:order_id, :product_id, :service_id, :scheduled_at, :name_snapshot, :sku_snapshot, :quantity, :unit_price, :subtotal)'
             );
             $decrementStmt = $this->connection->prepare(
                 'UPDATE products SET stock = stock - :quantity WHERE id = :id'
@@ -134,6 +159,7 @@ final class PdoOrderRepository implements OrderRepositoryInterface
                     'order_id' => $orderId,
                     'product_id' => $item['product_id'],
                     'service_id' => $item['service_id'],
+                    'scheduled_at' => $item['scheduled_at'] ?? null,
                     'name_snapshot' => $item['name_snapshot'],
                     'sku_snapshot' => $item['sku_snapshot'] ?? null,
                     'quantity' => $item['quantity'],
@@ -229,6 +255,70 @@ final class PdoOrderRepository implements OrderRepositoryInterface
         $stmt->execute();
 
         return ['data' => $stmt->fetchAll(), 'total' => $total, 'page' => $page, 'per_page' => $perPage];
+    }
+
+    /**
+     * Módulo de reservas (sección 12): cada item de pedido con servicio agendado
+     * ES una reserva — se listan directamente desde order_items/orders, sin
+     * duplicar el estado del pedido en una tabla aparte.
+     */
+    public function paginateReservationsForAdmin(array $filters): array
+    {
+        $conditions = ['oi.service_id IS NOT NULL', 'oi.scheduled_at IS NOT NULL', 'o.deleted_at IS NULL'];
+        $params = [];
+
+        if (!empty($filters['status'])) {
+            $conditions[] = 'o.status = :status';
+            $params['status'] = $filters['status'];
+        }
+
+        if (!empty($filters['date'])) {
+            $conditions[] = 'DATE(oi.scheduled_at) = :date';
+            $params['date'] = $filters['date'];
+        }
+
+        if (!empty($filters['upcoming_only'])) {
+            $conditions[] = 'oi.scheduled_at >= NOW()';
+        }
+
+        $where = 'WHERE ' . implode(' AND ', $conditions);
+
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $perPage = min(100, max(1, (int) ($filters['per_page'] ?? 30)));
+        $offset = ($page - 1) * $perPage;
+
+        $countStmt = $this->connection->prepare(
+            "SELECT COUNT(*) FROM order_items oi INNER JOIN orders o ON o.id = oi.order_id {$where}"
+        );
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        $sql = "SELECT oi.id, oi.scheduled_at, oi.name_snapshot AS service_name, oi.quantity, oi.service_id,
+                    o.order_number, o.status,
+                    u.name AS customer_name, u.last_name AS customer_last_name,
+                    u.email AS customer_email, u.phone AS customer_phone
+                FROM order_items oi
+                INNER JOIN orders o ON o.id = oi.order_id
+                INNER JOIN users u ON u.id = o.user_id
+                {$where}
+                ORDER BY oi.scheduled_at ASC
+                LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->connection->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $reservations = array_map(function (array $row) {
+            $row['next_statuses'] = OrderStatusTransitions::nextStates($row['status']);
+
+            return $row;
+        }, $stmt->fetchAll());
+
+        return ['data' => $reservations, 'total' => $total, 'page' => $page, 'per_page' => $perPage];
     }
 
     public function findByOrderNumberForAdmin(string $orderNumber): ?array

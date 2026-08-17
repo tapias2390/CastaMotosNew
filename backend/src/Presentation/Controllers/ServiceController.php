@@ -34,6 +34,8 @@ final class ServiceController
         'price' => 'required|numeric|gte:0',
         'duration_minutes' => 'integer|gte:0',
         'location' => 'max:255',
+        'latitude' => 'numeric',
+        'longitude' => 'numeric',
         'status' => 'in:draft,active,inactive',
     ];
 

@@ -29,7 +29,10 @@ final class AdminOrderController
 
     public function index(Request $request): void
     {
-        Response::success($this->orders->paginateForAdmin($request->query()));
+        $result = $this->orders->paginateForAdmin($request->query());
+        $result['data'] = array_map([$this, 'withNextStatuses'], $result['data']);
+
+        Response::success($result);
     }
 
     public function show(Request $request, string $orderNumber): void
@@ -39,7 +42,16 @@ final class AdminOrderController
             throw new NotFoundException('Pedido no encontrado.');
         }
 
-        Response::success($order);
+        Response::success($this->withNextStatuses($order));
+    }
+
+    /** Agrega a qué estados se puede avanzar desde el actual (sección 22: sin esto,
+     * el frontend tendría que duplicar el grafo de OrderStatusTransitions). */
+    private function withNextStatuses(array $order): array
+    {
+        $order['next_statuses'] = OrderStatusTransitions::nextStates($order['status']);
+
+        return $order;
     }
 
     public function updateStatus(Request $request, string $orderNumber): void

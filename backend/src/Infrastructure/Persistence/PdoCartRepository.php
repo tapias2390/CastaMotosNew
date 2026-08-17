@@ -76,7 +76,7 @@ final class PdoCartRepository implements CartRepositoryInterface
     public function itemsWithLiveData(int $cartId): array
     {
         $stmt = $this->connection->prepare(
-            'SELECT ci.id, ci.product_id, ci.service_id, ci.quantity, ci.unit_price_snapshot,
+            'SELECT ci.id, ci.product_id, ci.service_id, ci.scheduled_at, ci.quantity, ci.unit_price_snapshot,
                     p.name AS product_name, p.slug AS product_slug, p.price AS product_price, p.sku AS product_sku,
                     p.stock AS product_stock, p.status AS product_status,
                     p.discount_percentage AS product_discount, p.tax_rate AS product_tax,
@@ -122,6 +122,8 @@ final class PdoCartRepository implements CartRepositoryInterface
             'available_stock' => $availableStock,
             'is_available' => $available,
             'quantity_exceeds_stock' => $availableStock !== null && $quantity > $availableStock,
+            // Solo aplica a servicios (sección 12: reservas) — siempre null en productos.
+            'scheduled_at' => $row['scheduled_at'] ?? null,
         ];
     }
 
@@ -161,16 +163,17 @@ final class PdoCartRepository implements CartRepositoryInterface
         return $row ?: null;
     }
 
-    public function addItem(int $cartId, ?int $productId, ?int $serviceId, int $quantity, float $unitPriceSnapshot): int
+    public function addItem(int $cartId, ?int $productId, ?int $serviceId, int $quantity, float $unitPriceSnapshot, ?string $scheduledAt = null): int
     {
         $stmt = $this->connection->prepare(
-            'INSERT INTO cart_items (cart_id, product_id, service_id, quantity, unit_price_snapshot)
-             VALUES (:cart_id, :product_id, :service_id, :quantity, :unit_price_snapshot)'
+            'INSERT INTO cart_items (cart_id, product_id, service_id, scheduled_at, quantity, unit_price_snapshot)
+             VALUES (:cart_id, :product_id, :service_id, :scheduled_at, :quantity, :unit_price_snapshot)'
         );
         $stmt->execute([
             'cart_id' => $cartId,
             'product_id' => $productId,
             'service_id' => $serviceId,
+            'scheduled_at' => $scheduledAt,
             'quantity' => $quantity,
             'unit_price_snapshot' => $unitPriceSnapshot,
         ]);

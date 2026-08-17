@@ -30,7 +30,10 @@ async function loadCheckoutSummary() {
   mount.innerHTML = `
     <div class="summary-box">
       ${cart.items.map((item) => `
-        <div class="summary-row"><span>${item.quantity}× ${helpers.escapeHtml(item.name)}</span><span>${helpers.formatCurrency(item.unit_price * item.quantity)}</span></div>
+        <div class="summary-row">
+          <span>${item.quantity}× ${helpers.escapeHtml(item.name)}${item.scheduled_at ? ` <br><small style="color:var(--gris-texto);">📅 ${helpers.formatDateTime(item.scheduled_at)}</small>` : ''}</span>
+          <span>${helpers.formatCurrency(item.unit_price * item.quantity)}</span>
+        </div>
       `).join('')}
       <div class="summary-row"><span>Subtotal</span><span>${helpers.formatCurrency(cart.subtotal)}</span></div>
       <div class="summary-row"><span>Descuento</span><span>-${helpers.formatCurrency(cart.discount_total)}</span></div>

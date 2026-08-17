@@ -373,6 +373,15 @@ final class PdoProductRepository implements ProductRepositoryInterface
 
     public function delete(int $id): void
     {
+        // Mismo criterio que PdoServiceRepository::delete(): las fotos se
+        // borran de verdad (archivo + fila) antes del soft-delete del
+        // producto, para no dejarlas huérfanas en storage/uploads/products.
+        $images = $this->imagesOf($id);
+        foreach ($images as $image) {
+            FileStorage::delete((string) Config::get('app.base_path') . '/storage/uploads/products', (string) $image['url']);
+        }
+        $this->connection->prepare('DELETE FROM product_images WHERE product_id = :id')->execute(['id' => $id]);
+
         $stmt = $this->connection->prepare('UPDATE products SET deleted_at = NOW() WHERE id = :id');
         $stmt->execute(['id' => $id]);
     }
@@ -396,11 +405,17 @@ final class PdoProductRepository implements ProductRepositoryInterface
         return array_map([$this, 'withStockStatus'], $stmt->fetchAll());
     }
 
+    public function countImages(int $productId): int
+    {
+        $stmt = $this->connection->prepare('SELECT COUNT(*) FROM product_images WHERE product_id = :id');
+        $stmt->execute(['id' => $productId]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     public function addImage(int $productId, string $path, bool $isPrimary): int
     {
-        $countStmt = $this->connection->prepare('SELECT COUNT(*) FROM product_images WHERE product_id = :id');
-        $countStmt->execute(['id' => $productId]);
-        $isFirst = ((int) $countStmt->fetchColumn()) === 0;
+        $isFirst = $this->countImages($productId) === 0;
 
         $makePrimary = $isPrimary || $isFirst;
 

@@ -1,14 +1,6 @@
 /**
  * Confirmación de pedido (sección 19, paso 6: "Pedido creado").
  */
-function statusLabel(status) {
-  const labels = {
-    PENDIENTE: 'Pendiente', CONFIRMADO: 'Confirmado', PAGO_PENDIENTE: 'Pago pendiente',
-    PAGO_CONFIRMADO: 'Pago confirmado', PREPARANDO: 'Preparando', EN_CAMINO: 'En camino',
-    ENTREGADO: 'Entregado', CANCELADO: 'Cancelado', DEVUELTO: 'Devuelto',
-  };
-  return labels[status] || status;
-}
 
 /**
  * Enlace de WhatsApp con el resumen del pedido ya escrito (sección 17: compartir).
@@ -19,7 +11,9 @@ function statusLabel(status) {
 function orderWhatsappLink(order, whatsappNumber) {
   if (!whatsappNumber) return null;
 
-  const itemsText = order.items.map((item) => `- ${item.quantity}× ${item.name_snapshot}`).join('\n');
+  const itemsText = order.items.map((item) =>
+    `- ${item.quantity}× ${item.name_snapshot}${item.scheduled_at ? ` (${helpers.formatDateTime(item.scheduled_at)})` : ''}`
+  ).join('\n');
   const message = `Hola CASTAMOTO! Quiero coordinar mi pedido *${order.order_number}*:\n${itemsText}\nTotal: ${helpers.formatCurrency(order.total)}`;
 
   return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
@@ -48,12 +42,15 @@ async function initOrderConfirmationPage() {
         <div style="font-size:3rem;">✅</div>
         <p>¡Gracias por tu compra!</p>
         <div class="order-number">${helpers.escapeHtml(order.order_number)}</div>
-        <span class="badge badge-disponible">${statusLabel(order.status)}</span>
+        <span class="badge badge-disponible">${helpers.orderStatusLabel(order.status)}</span>
       </div>
 
       <div class="summary-box mt-16">
         ${order.items.map((item) => `
-          <div class="summary-row"><span>${item.quantity}× ${helpers.escapeHtml(item.name_snapshot)}</span><span>${helpers.formatCurrency(item.subtotal)}</span></div>
+          <div class="summary-row">
+            <span>${item.quantity}× ${helpers.escapeHtml(item.name_snapshot)}${item.scheduled_at ? ` <br><small style="color:var(--gris-texto);">📅 ${helpers.formatDateTime(item.scheduled_at)}</small>` : ''}</span>
+            <span>${helpers.formatCurrency(item.subtotal)}</span>
+          </div>
         `).join('')}
         <div class="summary-row"><span>Subtotal</span><span>${helpers.formatCurrency(order.subtotal)}</span></div>
         <div class="summary-row"><span>Descuento</span><span>-${helpers.formatCurrency(order.discount_total)}</span></div>

@@ -19,14 +19,14 @@ final class AddCartItemUseCase
     ) {
     }
 
-    public function handle(int $cartId, ?int $productId, ?int $serviceId, int $quantity): void
+    public function handle(int $cartId, ?int $productId, ?int $serviceId, int $quantity, ?string $scheduledAt = null): void
     {
         if ($productId !== null) {
             $this->addProduct($cartId, $productId, $quantity);
             return;
         }
 
-        $this->addService($cartId, $serviceId, $quantity);
+        $this->addService($cartId, $serviceId, $quantity, $scheduledAt);
     }
 
     private function addProduct(int $cartId, int $productId, int $quantity): void
@@ -52,19 +52,32 @@ final class AddCartItemUseCase
         }
     }
 
-    private function addService(int $cartId, int $serviceId, int $quantity): void
+    /**
+     * A diferencia de un producto, cada servicio agregado es una RESERVA para
+     * una fecha/hora concreta (sección 12) — nunca se combina con un item
+     * existente sumando cantidades (agendar "2x corte de cabello" en una sola
+     * fila no tiene sentido), cada uno queda como su propia fila de carrito.
+     */
+    private function addService(int $cartId, int $serviceId, int $quantity, ?string $scheduledAt): void
     {
         $service = $this->services->find($serviceId);
         if ($service === null || $service['status'] !== 'active') {
             throw new NotFoundException('Servicio no encontrado.');
         }
 
-        $existing = $this->carts->findExistingItem($cartId, null, $serviceId);
-
-        if ($existing !== null) {
-            $this->carts->updateItemQuantity((int) $existing['id'], (int) $existing['quantity'] + $quantity);
-        } else {
-            $this->carts->addItem($cartId, null, $serviceId, $quantity, (float) $service['price']);
+        if ($scheduledAt === null || $scheduledAt === '') {
+            throw new ValidationException('No fue posible agendar el servicio.', [
+                'scheduled_at' => ['Debes elegir una fecha y hora para el servicio.'],
+            ]);
         }
+
+        $timestamp = strtotime($scheduledAt);
+        if ($timestamp === false || $timestamp <= time()) {
+            throw new ValidationException('No fue posible agendar el servicio.', [
+                'scheduled_at' => ['La fecha y hora deben ser válidas y futuras.'],
+            ]);
+        }
+
+        $this->carts->addItem($cartId, null, $serviceId, $quantity, (float) $service['price'], date('Y-m-d H:i:s', $timestamp));
     }
 }

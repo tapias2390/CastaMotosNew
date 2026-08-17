@@ -75,6 +75,38 @@ const helpers = {
     return `<span class="stars">${stars}</span> <span>(${total})</span>`;
   },
 
+  /** Etiqueta en español del estado de un pedido (sección 22) — compartida
+   * entre la confirmación del cliente (pedido.js) y el panel admin (admin.js). */
+  orderStatusLabel(status) {
+    const labels = {
+      PENDIENTE: 'Pendiente', CONFIRMADO: 'Confirmado', PAGO_PENDIENTE: 'Pago pendiente',
+      PAGO_CONFIRMADO: 'Pago confirmado', PREPARANDO: 'Preparando', EN_CAMINO: 'En camino',
+      ENTREGADO: 'Entregado', CANCELADO: 'Cancelado', DEVUELTO: 'Devuelto',
+    };
+    return labels[status] || status;
+  },
+
+  /** Etiqueta de ACCIÓN (verbo, "qué hacer") para avanzar un pedido al estado
+   * indicado — la usa el panel admin para mostrar botones tipo "Confirmar
+   * pago" en vez de un selector con el nombre crudo del estado. */
+  orderActionLabel(status) {
+    const labels = {
+      CONFIRMADO: 'Confirmar pedido', PAGO_PENDIENTE: 'Registrar pago pendiente',
+      PAGO_CONFIRMADO: 'Confirmar pago', PREPARANDO: 'Marcar en preparación',
+      EN_CAMINO: 'Marcar en camino', ENTREGADO: 'Marcar entregado',
+      CANCELADO: 'Cancelar pedido', DEVUELTO: 'Marcar devuelto',
+    };
+    return labels[status] || `Cambiar a ${status}`;
+  },
+
+  /** Fecha/hora de una reserva de servicio (sección 12) en formato legible. */
+  formatDateTime(value) {
+    if (!value) return '';
+    const date = new Date(value.replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  },
+
   /** Aplana el árbol de categorías (padre + hijos) en una sola lista, para <select>/checkboxes. */
   flattenCategories(tree) {
     return tree.reduce((flat, node) => flat.concat([node], helpers.flattenCategories(node.children || [])), []);
