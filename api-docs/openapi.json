@@ -371,6 +371,12 @@
         "responses": { "200": { "description": "API operativa" } }
       }
     },
+    "/settings/public": {
+      "get": {
+        "tags": ["Sistema"], "summary": "Configuración pública no sensible (ej. número de WhatsApp de contacto)",
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "object", "properties": { "contact_whatsapp_number": { "type": "string", "description": "Vacío si no se ha configurado CONTACT_WHATSAPP_NUMBER en el backend." } } } } } } } } }
+      }
+    },
     "/auth/register": {
       "post": {
         "tags": ["Autenticación"], "summary": "Registrar usuario (rol cliente por defecto)",

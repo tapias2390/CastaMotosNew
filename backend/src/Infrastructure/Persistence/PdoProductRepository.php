@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence;
 
+use App\Application\Support\FileStorage;
 use App\Domain\Repositories\ProductRepositoryInterface;
+use App\Infrastructure\Config\Config;
 use PDO;
 
 final class PdoProductRepository implements ProductRepositoryInterface
@@ -417,12 +419,18 @@ final class PdoProductRepository implements ProductRepositoryInterface
 
     public function deleteImage(int $imageId): void
     {
-        $stmt = $this->connection->prepare('SELECT product_id, is_primary FROM product_images WHERE id = :id');
+        $stmt = $this->connection->prepare('SELECT product_id, is_primary, url FROM product_images WHERE id = :id');
         $stmt->execute(['id' => $imageId]);
         $image = $stmt->fetch();
 
         $delete = $this->connection->prepare('DELETE FROM product_images WHERE id = :id');
         $delete->execute(['id' => $imageId]);
+
+        // Se borra el archivo físico DESPUÉS de confirmar el borrado en BD (mismo
+        // criterio que PdoServiceRepository::deleteImage) — evita huérfanos en disco.
+        if ($image) {
+            FileStorage::delete((string) Config::get('app.base_path') . '/storage/uploads/products', (string) $image['url']);
+        }
 
         if ($image && (int) $image['is_primary'] === 1) {
             // Si se borró la imagen principal, la siguiente por orden pasa a serlo.

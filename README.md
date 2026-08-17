@@ -21,7 +21,7 @@ composer install
 1. Copiar `backend/.env.example` a `backend/.env` (ya existe un `.env` con valores por defecto para este entorno local; **no se sube al repositorio**).
 2. Ajustar credenciales si es necesario (por defecto: `root` sin contraseña, como en una instalación estándar de XAMPP).
 
-Variables principales (ver `backend/.env.example` para el listado completo): `APP_ENV`, `APP_URL`, `DB_*`, `JWT_SECRET`, `AUTH_*` (intentos de login, bloqueo, TTL de verificación/recuperación), `MAIL_*`, `PAYMENT_*`, `AI_*`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
+Variables principales (ver `backend/.env.example` para el listado completo): `APP_ENV`, `APP_URL`, `DB_*`, `JWT_SECRET`, `AUTH_*` (intentos de login, bloqueo, TTL de verificación/recuperación), `MAIL_*`, `PAYMENT_*`, `AI_*`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`, `CONTACT_WHATSAPP_NUMBER` (número real del negocio, formato internacional sin "+" ni espacios, ej. `573001234567`; vacío por defecto — mientras lo esté, el botón de WhatsApp del frontend permanece oculto en vez de mostrar un número inventado).
 
 ### Correo en desarrollo local
 
@@ -68,7 +68,7 @@ Con Apache y MySQL corriendo desde el panel de control de XAMPP, y el proyecto u
 | `/carrito` | Carrito (funciona sin sesión, vía `X-Cart-Token`) |
 | `/checkout` | Dirección → método de entrega → método de pago → confirmar |
 | `/pedido/{numero}` | Confirmación del pedido creado |
-| `/admin` | Panel básico (Fase 6): pedidos (cambiar estado) e inventario (ver stock/reservado/disponible, ajustar). Solo visible/accesible con permiso `manage-orders`/`manage-inventory`. |
+| `/admin` | Panel básico (Fase 6): pedidos (cambiar estado), inventario (ver stock/reservado/disponible, ajustar) y **Servicios** (crear/editar/eliminar, con fotos). Cada pestaña requiere su propio permiso (`manage-orders`/`manage-inventory`/`manage-services`). |
 
 Login/registro están en un modal accesible desde el botón del header en cualquier página (`frontend/js/components/layout.js`). Es HTML/CSS/JS plano sin build step (sección 39: "librerías JS solo cuando aporten valor real"); todas las rutas amigables se resuelven en el `.htaccess` de la raíz hacia los archivos estáticos de `frontend/pages/`.
 

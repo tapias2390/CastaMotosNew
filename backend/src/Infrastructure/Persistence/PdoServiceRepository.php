@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence;
 
+use App\Application\Support\FileStorage;
 use App\Domain\Repositories\ServiceRepositoryInterface;
+use App\Infrastructure\Config\Config;
 use PDO;
 
 final class PdoServiceRepository implements ServiceRepositoryInterface
@@ -269,8 +271,18 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
 
     public function deleteImage(int $imageId): void
     {
+        $select = $this->connection->prepare('SELECT url FROM service_images WHERE id = :id');
+        $select->execute(['id' => $imageId]);
+        $url = $select->fetchColumn();
+
         $stmt = $this->connection->prepare('DELETE FROM service_images WHERE id = :id');
         $stmt->execute(['id' => $imageId]);
+
+        // Se borra el archivo físico DESPUÉS de confirmar el borrado en BD, y solo
+        // si de verdad existía la fila (evita intentar borrar con un path vacío).
+        if ($url !== false) {
+            FileStorage::delete((string) Config::get('app.base_path') . '/storage/uploads/services', (string) $url);
+        }
     }
 
     public function imageBelongsToService(int $imageId, int $serviceId): bool

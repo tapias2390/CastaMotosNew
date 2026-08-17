@@ -35,4 +35,19 @@ final class FileStorage
 
         return $filename;
     }
+
+    /**
+     * Elimina el archivo físico de una subida previa (ej. al borrar la imagen
+     * de un producto/servicio). Idempotente: si el archivo ya no existe, no
+     * hace nada — evita dejar archivos huérfanos en storage/uploads/* cada vez
+     * que se elimina la fila de la base de datos.
+     */
+    public static function delete(string $directory, string $filename): void
+    {
+        $path = $directory . '/' . basename($filename);
+
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
 }

@@ -7,17 +7,13 @@ let currentPage = 1;
 let categorySlugToId = {};
 let onSaleOnly = false;
 
-function flattenCategories(tree) {
-  return tree.reduce((flat, node) => flat.concat([node], flattenCategories(node.children || [])), []);
-}
-
 async function populateFilterOptions() {
   const categorySelect = document.getElementById('filter-category');
   const brandSelect = document.getElementById('filter-brand');
 
   try {
     const [categories, brands] = await Promise.all([catalogService.categories(), catalogService.brands()]);
-    const flatCategories = flattenCategories(categories);
+    const flatCategories = helpers.flattenCategories(categories);
 
     flatCategories.forEach((cat) => { categorySlugToId[cat.slug] = cat.id; });
 

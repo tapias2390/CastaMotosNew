@@ -18,6 +18,18 @@ const catalogService = {
   services: (filters = {}) => apiService.get('/services' + toQueryString(filters)),
   service: (slug) => apiService.get(`/services/${encodeURIComponent(slug)}`),
 
+  // Gestión de servicios (panel admin/vendedor) — requiere permiso manage-services,
+  // aplicado en el backend (RequirePermissionMiddleware); aquí solo se arma la petición.
+  createService: (payload) => apiService.post('/services', payload),
+  updateService: (id, payload) => apiService.put(`/services/${id}`, payload),
+  deleteService: (id) => apiService.del(`/services/${id}`),
+  uploadServiceImage: (id, file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiService.post(`/services/${id}/images`, formData, { isFormData: true });
+  },
+  deleteServiceImage: (serviceId, imageId) => apiService.del(`/services/${serviceId}/images/${imageId}`),
+
   search: (q) => apiService.get('/search' + toQueryString({ q })),
   suggestions: (q) => apiService.get('/search/suggestions' + toQueryString({ q })),
 

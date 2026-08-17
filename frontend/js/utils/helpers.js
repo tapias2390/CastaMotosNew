@@ -75,6 +75,11 @@ const helpers = {
     return `<span class="stars">${stars}</span> <span>(${total})</span>`;
   },
 
+  /** Aplana el árbol de categorías (padre + hijos) en una sola lista, para <select>/checkboxes. */
+  flattenCategories(tree) {
+    return tree.reduce((flat, node) => flat.concat([node], helpers.flattenCategories(node.children || [])), []);
+  },
+
   /** Ícono por categoría (mismo criterio que los placeholders de DemoDataSeeder). */
   categoryIcon(slug) {
     const icons = {
