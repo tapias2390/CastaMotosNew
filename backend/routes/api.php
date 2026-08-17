@@ -7,6 +7,7 @@ use App\Presentation\Controllers\AddressController;
 use App\Presentation\Controllers\AdminInventoryController;
 use App\Presentation\Controllers\AdminCustomerController;
 use App\Presentation\Controllers\AdminOrderController;
+use App\Presentation\Controllers\AdminPaymentMethodController;
 use App\Presentation\Controllers\AdminReservationController;
 use App\Presentation\Controllers\AuthController;
 use App\Presentation\Controllers\BrandController;
@@ -114,6 +115,8 @@ $router->delete('api/cart', [CartController::class, 'clear'], [new OptionalAuthM
 
 // --- Métodos de pago habilitados (consulta pública para el checkout) ---
 $router->get('api/payment-methods', [PaymentMethodController::class, 'index']);
+$router->get('api/admin/payment-methods', [AdminPaymentMethodController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-payment-methods')]);
+$router->put('api/admin/payment-methods/{id}', [AdminPaymentMethodController::class, 'update'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-payment-methods')]);
 
 // --- Checkout y pedidos (Fase 5 / sección 19) ---
 $router->post('api/checkout', [CheckoutController::class, 'store'], [new AuthMiddleware()]);

@@ -30,6 +30,7 @@
       <button class="admin-nav-link" data-tab="services"><span>🔧</span> Servicios</button>
       <button class="admin-nav-link" data-tab="products"><span>🏍️</span> Productos</button>
       <button class="admin-nav-link" data-tab="brands"><span>🏷️</span> Marcas</button>
+      <button class="admin-nav-link" data-tab="payment-methods"><span>💳</span> Métodos de pago</button>
     </nav>
   </aside>
 
@@ -197,6 +198,23 @@
       </table>
     </div>
     <div id="brands-error" class="form-error mt-16"></div>
+  </section>
+
+  <section id="admin-tab-payment-methods" hidden>
+    <p style="color:var(--gris-texto);font-size:0.85rem;margin-top:0;">
+      Activa o desactiva cada método sin tocar código (se refleja al instante en el checkout). Las pasarelas de tarjeta necesitan sus credenciales configuradas antes de poder usarse — mientras tanto, si las activás, el checkout las rechaza con un mensaje claro en vez de crear un pedido que nadie puede cobrar.
+    </p>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Método</th><th>Código</th><th>Activo</th><th>Configuración</th><th></th></tr>
+        </thead>
+        <tbody id="payment-methods-table-body">
+          <tr><td colspan="5">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="payment-methods-error" class="form-error mt-16"></div>
   </section>
   </main>
 </div>
@@ -392,6 +410,21 @@
       </div>
       <div class="form-error" id="brand-form-error"></div>
       <button class="btn btn-primary btn-block" type="submit" id="brand-submit-btn">Crear marca</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="payment-config-modal-overlay">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="payment-config-modal-title">Configurar método de pago</h2>
+      <button class="modal__close" type="button" id="payment-config-modal-close" aria-label="Cerrar">✕</button>
+    </div>
+    <form id="payment-config-form">
+      <input type="hidden" id="payment-config-id">
+      <div id="payment-config-fields"></div>
+      <div class="form-error" id="payment-config-form-error"></div>
+      <button class="btn btn-primary btn-block" type="submit">Guardar configuración</button>
     </form>
   </div>
 </div>

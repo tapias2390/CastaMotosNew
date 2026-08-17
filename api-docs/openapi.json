@@ -809,8 +809,32 @@
     },
     "/payment-methods": {
       "get": {
-        "tags": ["Métodos de pago"], "summary": "Listar métodos de pago habilitados",
+        "tags": ["Métodos de pago"], "summary": "Listar métodos de pago habilitados (público, sin \"config\")",
+        "description": "Solo devuelve id/code/name/description/sort_order de los métodos con is_enabled=1 — nunca el campo \"config\" (puede tener llaves de una pasarela), ese solo lo ve el panel admin.",
         "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/PaymentMethod" } } } } } } } }
+      }
+    },
+    "/admin/payment-methods": {
+      "get": {
+        "tags": ["Métodos de pago"], "summary": "Listar TODOS los métodos de pago, con config (manage-payment-methods)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "OK" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/admin/payment-methods/{id}": {
+      "put": {
+        "tags": ["Métodos de pago"], "summary": "Activar/desactivar y configurar un método (manage-payment-methods)",
+        "description": "Sección 21: nunca se agregan/quitan métodos por código — la lista de proveedores posibles es fija (cash, bank_transfer, card, wompi, mercadopago, payu, stripe), lo que cambia en producción es cuáles están activos y su config.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["is_enabled"],
+          "properties": {
+            "is_enabled": { "type": "boolean" },
+            "config": { "type": "object", "description": "Ej. para bank_transfer: bank_name/account_type/account_number/account_holder. Para pasarelas externas: public_key/api_key. Nunca se acepta ni se guarda número de tarjeta/CVV (sección 20)." }
+          }
+        } } } },
+        "responses": { "200": { "description": "Actualizado" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
       }
     },
     "/checkout": {

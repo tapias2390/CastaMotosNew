@@ -45,6 +45,7 @@ const ADMIN_SECTIONS = {
   services: { title: 'Servicios', hint: 'Crea, edita y elimina los servicios publicados en el catálogo.' },
   products: { title: 'Productos', hint: 'Crea, edita y elimina los productos publicados en el catálogo.' },
   brands: { title: 'Marcas', hint: 'Fabricantes/marcas de los productos (ej. AKT, Bajaj) — lo más parecido a "proveedores" en un marketplace, donde no se le compra inventario a terceros para revender.' },
+  'payment-methods': { title: 'Métodos de pago', hint: 'Actívalos o desactívalos sin tocar código — el checkout refleja el cambio al instante.' },
 };
 
 /** Barra lateral (fija en escritorio, cajón deslizable en pantallas angostas). */
@@ -71,7 +72,7 @@ function wireSidebar() {
       link.classList.add('is-active');
 
       const tab = link.dataset.tab;
-      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands'].forEach((name) => {
+      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands', 'payment-methods'].forEach((name) => {
         const section = document.getElementById(`admin-tab-${name}`);
         section.hidden = name !== tab;
         if (name === tab) {
@@ -992,6 +993,145 @@ function wireBrandManagement() {
   });
 }
 
+/**
+ * Configuración de métodos de pago (sección 21, "MUY IMPORTANTE": activar/
+ * desactivar sin escribir código). El checkbox de "Activo" guarda apenas se
+ * toca — no hace falta un botón "Guardar" aparte para lo más común, que es
+ * prender o apagar un método. "Configurar" abre un formulario aparte solo
+ * para los campos de cada pasarela (nunca número de tarjeta/CVV, sección 20).
+ */
+const PAYMENT_CONFIG_FIELDS = {
+  bank_transfer: [
+    { key: 'bank_name', label: 'Banco', placeholder: 'Ej. Bancolombia' },
+    { key: 'account_type', label: 'Tipo de cuenta', placeholder: 'Ahorros / Corriente' },
+    { key: 'account_number', label: 'Número de cuenta', placeholder: '123-456789-00' },
+    { key: 'account_holder', label: 'Titular de la cuenta', placeholder: 'CASTAMOTO SAS' },
+  ],
+  // Tarjeta/Wompi/Mercado Pago/PayU/Stripe: mismos dos campos genéricos —
+  // ninguna tiene todavía una integración real conectada (ver
+  // ExternalPaymentGateway en el backend), así que alcanza con guardar las
+  // llaves para cuando se conecte de verdad.
+  _external: [
+    { key: 'public_key', label: 'Llave pública', placeholder: 'pk_...' },
+    { key: 'api_key', label: 'Llave privada / API key', placeholder: 'sk_...', type: 'password' },
+  ],
+};
+
+function paymentConfigFieldsFor(code) {
+  return PAYMENT_CONFIG_FIELDS[code] || PAYMENT_CONFIG_FIELDS._external;
+}
+
+async function loadPaymentMethods() {
+  const body = document.getElementById('payment-methods-table-body');
+  const errorBox = document.getElementById('payment-methods-error');
+  errorBox.textContent = '';
+
+  try {
+    const methods = await adminService.paymentMethods();
+
+    body.innerHTML = methods.map((method) => `
+      <tr data-method-id="${method.id}" data-method-code="${method.code}">
+        <td>${helpers.escapeHtml(method.name)}</td>
+        <td><code>${helpers.escapeHtml(method.code)}</code></td>
+        <td>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" data-role="toggle-enabled" ${method.is_enabled ? 'checked' : ''} style="width:auto;">
+            ${method.is_enabled ? 'Sí' : 'No'}
+          </label>
+        </td>
+        <td style="color:var(--gris-texto);font-size:0.8rem;">
+          ${method.code === 'cash' ? 'No requiere' : (method.config ? '✓ Configurado' : 'Sin configurar')}
+        </td>
+        <td>${method.code === 'cash' ? '' : '<button class="btn btn-secondary" data-action="configure">Configurar</button>'}</td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('[data-role="toggle-enabled"]').forEach((checkbox) => {
+      checkbox.addEventListener('change', async () => {
+        const row = checkbox.closest('tr');
+        const id = row.dataset.methodId;
+
+        try {
+          await adminService.updatePaymentMethod(id, { is_enabled: checkbox.checked });
+          helpers.toast(`${row.querySelector('td').textContent}: ${checkbox.checked ? 'activado' : 'desactivado'}.`, 'success');
+          loadPaymentMethods();
+        } catch (error) {
+          checkbox.checked = !checkbox.checked; // revierte el check si el backend lo rechazó
+          helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-action="configure"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const row = button.closest('tr');
+        const method = methods.find((m) => m.id === Number(row.dataset.methodId));
+        openPaymentConfigForm(method);
+      });
+    });
+  } catch (error) {
+    handleAdminError(error, errorBox);
+  }
+}
+
+function openPaymentConfigForm(method) {
+  document.getElementById('payment-config-id').value = method.id;
+  document.getElementById('payment-config-modal-title').textContent = `Configurar ${method.name}`;
+  document.getElementById('payment-config-form-error').textContent = '';
+
+  const fields = paymentConfigFieldsFor(method.code);
+  const config = method.config || {};
+
+  document.getElementById('payment-config-fields').innerHTML = fields.map((field) => `
+    <div class="form-group">
+      <label for="payment-config-${field.key}">${field.label}</label>
+      <input class="form-control" type="${field.type || 'text'}" id="payment-config-${field.key}"
+        placeholder="${field.placeholder}" value="${helpers.escapeHtml(config[field.key] || '')}">
+    </div>
+  `).join('');
+
+  document.getElementById('payment-config-modal-overlay').classList.add('is-open');
+}
+
+function wirePaymentMethodManagement() {
+  document.getElementById('payment-config-modal-close').addEventListener('click', () => {
+    document.getElementById('payment-config-modal-overlay').classList.remove('is-open');
+  });
+  document.getElementById('payment-config-modal-overlay').addEventListener('click', (event) => {
+    if (event.target === document.getElementById('payment-config-modal-overlay')) {
+      document.getElementById('payment-config-modal-overlay').classList.remove('is-open');
+    }
+  });
+
+  document.getElementById('payment-config-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorBox = document.getElementById('payment-config-form-error');
+    errorBox.textContent = '';
+
+    const id = document.getElementById('payment-config-id').value;
+    const row = document.querySelector(`[data-method-id="${id}"]`);
+    const fields = paymentConfigFieldsFor(row.dataset.methodCode);
+
+    const config = {};
+    fields.forEach((field) => {
+      const value = document.getElementById(`payment-config-${field.key}`).value.trim();
+      if (value) config[field.key] = value;
+    });
+
+    try {
+      await adminService.updatePaymentMethod(id, {
+        is_enabled: row.querySelector('[data-role="toggle-enabled"]').checked,
+        config,
+      });
+      helpers.toast('Configuración guardada.', 'success');
+      document.getElementById('payment-config-modal-overlay').classList.remove('is-open');
+      loadPaymentMethods();
+    } catch (error) {
+      errorBox.textContent = helpers.flattenErrors(error.fields) || error.message;
+    }
+  });
+}
+
 function handleAdminError(error, errorBox) {
   if (error.status === 401 || error.status === 403) {
     errorBox.textContent = 'No tienes permisos para ver esta sección.';
@@ -1010,6 +1150,7 @@ async function initAdminPage() {
   wireServiceManagement();
   wireProductManagement();
   wireBrandManagement();
+  wirePaymentMethodManagement();
   document.getElementById('orders-status-filter').addEventListener('change', loadOrders);
   document.getElementById('inventory-filter-form').addEventListener('submit', (event) => {
     event.preventDefault();
@@ -1036,6 +1177,7 @@ async function initAdminPage() {
   populateProductSelects();
   loadProductsAdmin();
   loadBrands();
+  loadPaymentMethods();
 }
 
 document.addEventListener('DOMContentLoaded', initAdminPage);

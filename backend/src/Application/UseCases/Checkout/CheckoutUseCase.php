@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\UseCases\Checkout;
 
+use App\Application\Payments\PaymentGatewayFactory;
 use App\Application\Support\CartPricingCalculator;
 use App\Application\Support\OrderNumberGenerator;
 use App\Domain\Repositories\AddressRepositoryInterface;
@@ -49,6 +50,12 @@ final class CheckoutUseCase
                 'payment_method_id' => ['El método de pago seleccionado no está disponible.'],
             ]);
         }
+
+        // Sección 52: el método está "activado" en la lista, pero eso no
+        // garantiza que ya pueda procesar un cobro de verdad (ej. una
+        // pasarela activada sin sus llaves cargadas todavía) — se falla acá,
+        // ANTES de crear el pedido, no después de que el cliente ya pagó.
+        PaymentGatewayFactory::make($paymentMethod['code'])->assertConfigured($paymentMethod['config'] ?? []);
 
         $items = $this->carts->itemsWithLiveData($cartId);
         $this->assertItemsAreCheckoutable($items);

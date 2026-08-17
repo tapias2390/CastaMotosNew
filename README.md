@@ -142,7 +142,9 @@ Las rutas marcadas con 🔒 requieren `Authorization: Bearer <token>` (JWT obten
 | DELETE | `/api/cart` | Vaciar carrito. |
 | POST 🔒 | `/api/checkout` | `{ address_id, payment_method_id, delivery_method, notes? }` → crea el pedido. |
 | GET 🔒 | `/api/orders/{orderNumber}` | Confirmación/detalle del pedido (solo el dueño; 404 si no es suyo). |
-| GET | `/api/payment-methods` | Métodos de pago habilitados (para que el checkout sepa qué mostrar). |
+| GET | `/api/payment-methods` | Métodos de pago habilitados (para que el checkout sepa qué mostrar); nunca incluye `config`. |
+| GET 🔒 | `/api/admin/payment-methods` | TODOS los métodos, con `config` (`manage-payment-methods`). |
+| PUT 🔒 | `/api/admin/payment-methods/{id}` | `{ is_enabled, config? }` — activar/desactivar y configurar (`manage-payment-methods`, sección 21). |
 | GET 🔒 | `/api/admin/orders` | Listar pedidos (`manage-orders`), filtro `status`. |
 | GET 🔒 | `/api/admin/orders/{orderNumber}` | Detalle de cualquier pedido (`manage-orders`). |
 | PUT 🔒 | `/api/admin/orders/{orderNumber}/status` | Cambiar estado `{ status, comment? }` (`manage-orders`), valida la transición. |
@@ -242,10 +244,11 @@ Antes de desplegar a producción:
 
 ## Próximas fases
 
-Fase 7: métodos de pago configurables (pasarelas reales) · Fase 8: correos + notificaciones · Fase 9: dashboard administrador completo · Fase 10: dashboard vendedor (incluye gestión de tiendas y restricción "solo mis productos") · Fase 11: IA · Fase 12: testing + seguridad + optimización.
+~~Fase 7: métodos de pago configurables~~ (lista, ver "Métodos de pago" en `/admin`) · Fase 8: correos + notificaciones (hoy solo hay correo de verificación/recuperación de clave — nada de confirmación de pedido, cambio de estado ni reserva) · Fase 9: resto del dashboard administrador (roles/permisos, cupones, configuración general) · Fase 10: dashboard vendedor (incluye gestión de tiendas y restricción "solo mis productos") · Fase 11: IA · Fase 12: testing + seguridad + optimización formal.
 
 **Notas de alcance:**
 - Cualquier usuario con permiso `manage-products`/`manage-services`/`manage-categories`/`manage-brands` puede gestionar todo el catálogo (no hay aún restricción "solo mi tienda") — eso se ajusta en la Fase 10.
 - El checkout requiere iniciar sesión (`orders.user_id` no es nulo); se puede armar el carrito como invitado, pero confirmar el pedido no.
 - Los cupones (`coupons`) no se aplican todavía en el carrito/checkout: no tienen fase asignada explícita en el prompt maestro.
-- El panel `/admin` (Fase 6) es básico a propósito (pedidos + inventario): se adelantó a pedido del usuario para poder visualizar la gestión sin esperar a la Fase 9, que construirá el dashboard administrativo completo (usuarios, roles, cupones, promociones, configuración, etc. — sección 28).
+- El panel `/admin` ya no es básico: Resumen, Pedidos, Reservas, Clientes, Inventario, Servicios, Productos, Marcas y Métodos de pago — falta roles/permisos y cupones/promociones (resto de la Fase 9) y todo lo de vendedor/tiendas (Fase 10).
+- Tarjeta/Wompi/Mercado Pago/PayU/Stripe están arquitecturalmente listas (`PaymentGatewayInterface`, ver `docs/ARCHITECTURE.md`) pero sin credenciales reales — activarlas sin configurar sus llaves hace que el checkout las rechace con un mensaje claro en vez de fingir que cobran.

@@ -23,4 +23,9 @@ const adminService = {
 
   // Clientes registrados (sección 28) — excluye staff por defecto.
   customers: (filters = {}) => apiService.get('/admin/customers' + catalogService.toQueryString(filters)),
+
+  // Configuración de métodos de pago (sección 21) — activar/desactivar y
+  // guardar su config (nunca escritos en el código).
+  paymentMethods: () => apiService.get('/admin/payment-methods'),
+  updatePaymentMethod: (id, payload) => apiService.put(`/admin/payment-methods/${id}`, payload),
 };
