@@ -1,5 +1,17 @@
 Options -Indexes
 
+# Bloquea el acceso HTTP directo a archivos punto (.env, .env.production, .git*,
+# etc.). Sin esto, cualquiera puede pedir https://tudominio/.env y leer en texto
+# plano credenciales de BD, JWT_SECRET, claves de pago, etc. Va antes que
+# cualquier otra regla para que aplique siempre, incluso si mod_rewrite falla.
+<FilesMatch "^\.">
+    Require all denied
+    # Sintaxis Apache 2.2 (algunos hostings cPanel aún la usan); Apache ignora
+    # el bloque que no le corresponde a su versión, así que dejar ambos es seguro.
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
 # Algunos hostings compartidos (cPanel) traen mod_mime mal configurado y
 # terminan sirviendo .css/.js con un Content-Type genérico (ej. text/plain) —
 # el navegador entonces se niega a aplicar la hoja de estilos o ejecutar el
