@@ -23,6 +23,7 @@ const adminService = {
 
   // Clientes registrados (sección 28) — excluye staff por defecto.
   customers: (filters = {}) => apiService.get('/admin/customers' + catalogService.toQueryString(filters)),
+  updateCustomerRole: (userId, role) => apiService.put(`/admin/customers/${userId}/role`, { role }),
 
   // Configuración de métodos de pago (sección 21) — activar/desactivar y
   // guardar su config (nunca escritos en el código).

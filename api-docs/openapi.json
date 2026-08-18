@@ -26,6 +26,7 @@
     { "name": "Dashboard" },
     { "name": "Administración de inventario" },
     { "name": "Métodos de pago" },
+    { "name": "Cupones" },
     { "name": "Notificaciones" },
     { "name": "Archivos" }
   ],
@@ -856,6 +857,80 @@
           }
         } } } },
         "responses": { "200": { "description": "Actualizado" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/cart/coupon": {
+      "post": {
+        "tags": ["Carrito"], "summary": "Aplicar cupón al carrito (sección 30)",
+        "description": "Valida contra el subtotal EN VIVO del carrito (activo, vigente, cupos disponibles, compra mínima). Se re-verifica de nuevo al confirmar el checkout, por si cambió algo entretanto.",
+        "parameters": [{ "$ref": "#/components/parameters/CartTokenHeader" }],
+        "security": [{}, { "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["code"], "properties": { "code": { "type": "string" } }
+        } } } },
+        "responses": { "200": { "description": "Aplicado" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      },
+      "delete": {
+        "tags": ["Carrito"], "summary": "Quitar el cupón aplicado",
+        "parameters": [{ "$ref": "#/components/parameters/CartTokenHeader" }],
+        "security": [{}, { "bearerAuth": [] }],
+        "responses": { "200": { "description": "Removido" } }
+      }
+    },
+    "/admin/coupons": {
+      "get": {
+        "tags": ["Cupones"], "summary": "Listar cupones (manage-coupons)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "inactive"] } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      },
+      "post": {
+        "tags": ["Cupones"], "summary": "Crear cupón (manage-coupons)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["code", "type", "value"],
+          "properties": {
+            "code": { "type": "string" },
+            "type": { "type": "string", "enum": ["percentage", "fixed"] },
+            "value": { "type": "number", "description": "Si type=percentage, no puede superar 100." },
+            "min_purchase": { "type": "number" },
+            "usage_limit": { "type": "integer" },
+            "starts_at": { "type": "string", "format": "date" },
+            "ends_at": { "type": "string", "format": "date" },
+            "status": { "type": "string", "enum": ["active", "inactive"] }
+          }
+        } } } },
+        "responses": { "201": { "description": "Creado" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/admin/coupons/{id}": {
+      "put": {
+        "tags": ["Cupones"], "summary": "Editar cupón (manage-coupons)", "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Actualizado" } }
+      },
+      "delete": {
+        "tags": ["Cupones"], "summary": "Eliminar cupón (manage-coupons)", "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "Eliminado" } }
+      }
+    },
+    "/admin/customers/{id}/role": {
+      "put": {
+        "tags": ["Dashboard"], "summary": "Cambiar el rol de un usuario (manage-roles)",
+        "description": "Permiso separado de manage-users a propósito: no todo el que ve clientes puede ascenderlos a administrador. Un usuario no puede cambiar su propio rol.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["role"],
+          "properties": { "role": { "type": "string", "enum": ["cliente", "vendedor", "administrador", "superadministrador"] } }
+        } } } },
+        "responses": { "200": { "description": "Actualizado" }, "403": { "$ref": "#/components/responses/Forbidden" }, "422": { "$ref": "#/components/responses/ValidationError" } }
       }
     },
     "/checkout": {

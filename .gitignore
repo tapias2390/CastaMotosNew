@@ -4,6 +4,7 @@ frontend/node_modules/
 
 # Entorno
 backend/.env
+backend/.env.production
 .env
 
 # Logs y almacenamiento

@@ -264,31 +264,58 @@ async function loadReservations() {
  * gestión de tiendas/vendedores es la Fase 10 del prompt maestro, todavía
  * no construida (ver comentario en AdminCustomerController).
  */
+const ADMIN_ROLES = ['cliente', 'vendedor', 'administrador', 'superadministrador'];
+
 async function loadCustomers() {
   const body = document.getElementById('customers-table-body');
   const errorBox = document.getElementById('customers-error');
   errorBox.textContent = '';
 
   const search = document.getElementById('customers-search').value.trim() || undefined;
+  const includeStaff = document.getElementById('customers-include-staff').checked ? 1 : undefined;
 
   try {
-    const result = await adminService.customers({ search, per_page: 50 });
+    const result = await adminService.customers({ search, include_staff: includeStaff, per_page: 50 });
 
     if (result.data.length === 0) {
-      body.innerHTML = '<tr><td colspan="6">No hay clientes registrados todavía.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7">No hay clientes registrados todavía.</td></tr>';
       return;
     }
 
     body.innerHTML = result.data.map((customer) => `
-      <tr>
+      <tr data-user-id="${customer.id}">
         <td>${helpers.escapeHtml(customer.name)} ${helpers.escapeHtml(customer.last_name)}</td>
         <td>${helpers.escapeHtml(customer.email)}${customer.phone ? `<br><span style="color:var(--gris-texto);">${helpers.escapeHtml(customer.phone)}</span>` : ''}</td>
         <td>${new Date(customer.created_at).toLocaleDateString('es-CO')}</td>
         <td>${customer.email_verified_at ? '<span class="status-badge is-final-good">Sí</span>' : '<span class="status-badge is-final-bad">No</span>'}</td>
         <td>${customer.orders_count}</td>
         <td>${helpers.formatCurrency(customer.total_spent)}</td>
+        <td>
+          <div class="flex gap-8">
+            <select data-role="role-select">
+              ${ADMIN_ROLES.map((role) => `<option value="${role}" ${customer.roles.includes(role) ? 'selected' : ''}>${role}</option>`).join('')}
+            </select>
+            <button class="btn btn-secondary" data-action="save-role">Guardar</button>
+          </div>
+        </td>
       </tr>
     `).join('');
+
+    body.querySelectorAll('[data-action="save-role"]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const row = button.closest('tr');
+        const userId = row.dataset.userId;
+        const role = row.querySelector('[data-role="role-select"]').value;
+
+        try {
+          await adminService.updateCustomerRole(userId, role);
+          helpers.toast('Rol actualizado.', 'success');
+          loadCustomers();
+        } catch (error) {
+          helpers.toast(helpers.flattenErrors(error.fields) || error.message, 'error');
+        }
+      });
+    });
   } catch (error) {
     handleAdminError(error, errorBox);
   }
@@ -1295,6 +1322,7 @@ async function initAdminPage() {
     event.preventDefault();
     loadCustomers();
   });
+  document.getElementById('customers-include-staff').addEventListener('change', loadCustomers);
 
   loadDashboard();
   loadOrders();

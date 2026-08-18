@@ -126,14 +126,17 @@
         <input type="search" class="form-control" id="customers-search" placeholder="Buscar por nombre o correo..." style="max-width:260px;">
         <button class="btn btn-secondary" type="submit">Buscar</button>
       </form>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;color:var(--gris-texto);">
+        <input type="checkbox" id="customers-include-staff" style="width:auto;"> Mostrar staff (admin/vendedor)
+      </label>
     </div>
     <div class="admin-table-wrap">
       <table class="admin-table">
         <thead>
-          <tr><th>Cliente</th><th>Contacto</th><th>Registrado</th><th>Correo verificado</th><th>Pedidos</th><th>Total comprado</th></tr>
+          <tr><th>Cliente</th><th>Contacto</th><th>Registrado</th><th>Correo verificado</th><th>Pedidos</th><th>Total comprado</th><th>Rol</th></tr>
         </thead>
         <tbody id="customers-table-body">
-          <tr><td colspan="6">Cargando…</td></tr>
+          <tr><td colspan="7">Cargando…</td></tr>
         </tbody>
       </table>
     </div>

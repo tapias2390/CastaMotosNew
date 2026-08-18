@@ -1,5 +1,20 @@
 Options -Indexes
 
+# Algunos hostings compartidos (cPanel) traen mod_mime mal configurado y
+# terminan sirviendo .css/.js con un Content-Type genérico (ej. text/plain) —
+# el navegador entonces se niega a aplicar la hoja de estilos o ejecutar el
+# script, aunque el archivo se descargue bien (síntoma: "no reconoce CSS/JS").
+# Se fuerza el tipo correcto acá para no depender de la config por defecto del
+# servidor. (Ver también el <base href> dinámico en cada página de frontend/ —
+# si el problema es un 404 en vez de esto, la causa es otra: estructura de
+# carpetas distinta a la esperada en el docroot real de cPanel.)
+<IfModule mod_mime.c>
+    AddType text/css .css
+    AddType application/javascript .js
+    AddType image/svg+xml .svg
+    AddType application/json .json
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 

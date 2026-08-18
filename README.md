@@ -68,7 +68,7 @@ Con Apache y MySQL corriendo desde el panel de control de XAMPP, y el proyecto u
 | `/carrito` | Carrito (funciona sin sesión, vía `X-Cart-Token`) |
 | `/checkout` | Dirección → método de entrega → método de pago → confirmar |
 | `/pedido/{numero}` | Confirmación del pedido creado |
-| `/admin` | Panel con barra lateral (cajón deslizable en móvil): **Resumen** (ingresos, gráficas, top productos), pedidos (un botón por acción válida según la máquina de estados), **Reservas** (servicios agendados, ordenados por fecha), **Clientes** (registrados, con pedidos y total comprado), inventario, **Servicios**, **Productos** (crear/editar/eliminar, hasta 6 fotos c/u con giro 360°, SKU automático si se deja vacío, servicios con latitud/longitud opcional) y **Marcas** (fabricantes, ej. AKT/Bajaj — lo más parecido a "proveedores" en un marketplace). Cada sección requiere su propio permiso (`manage-orders`/`manage-users`/`manage-inventory`/`manage-services`/`manage-products`/`manage-brands`). Un admin que inicia sesión entra directo aquí. No hay pestaña de "Tiendas vendedoras" (gestión de vendedores externos del marketplace) — es la Fase 10 del prompt maestro, sin construir. |
+| `/admin` | Panel con barra lateral (cajón deslizable en móvil): **Resumen** (ingresos, gráficas, top productos), pedidos (un botón por acción válida según la máquina de estados), **Reservas** (servicios agendados, ordenados por fecha), **Clientes** (registrados, con pedidos, total comprado y cambio de rol), inventario, **Servicios**, **Productos** (crear/editar/eliminar, hasta 6 fotos c/u con giro 360°, SKU automático si se deja vacío, servicios con latitud/longitud opcional), **Marcas** (fabricantes, ej. AKT/Bajaj — lo más parecido a "proveedores" en un marketplace), **Métodos de pago** y **Cupones** (porcentuales/fijos, compra mínima, vigencia, límite de usos). Cada sección requiere su propio permiso (`manage-orders`/`manage-users`/`manage-roles`/`manage-inventory`/`manage-services`/`manage-products`/`manage-brands`/`manage-payment-methods`/`manage-coupons`). Un admin que inicia sesión entra directo aquí. No hay pestaña de "Tiendas vendedoras" (gestión de vendedores externos del marketplace) — es la Fase 10 del prompt maestro, sin construir. |
 
 Login/registro están en un modal accesible desde el botón del header en cualquier página (`frontend/js/components/layout.js`). Es HTML/CSS/JS plano sin build step (sección 39: "librerías JS solo cuando aporten valor real"); todas las rutas amigables se resuelven en el `.htaccess` de la raíz hacia los archivos estáticos de `frontend/pages/`.
 
@@ -140,6 +140,8 @@ Las rutas marcadas con 🔒 requieren `Authorization: Bearer <token>` (JWT obten
 | PUT | `/api/cart/items/{itemId}` | Cambiar cantidad. |
 | DELETE | `/api/cart/items/{itemId}` | Quitar ítem. |
 | DELETE | `/api/cart` | Vaciar carrito. |
+| POST | `/api/cart/coupon` | `{ code }` — aplicar cupón (sección 30), validado contra el subtotal en vivo. |
+| DELETE | `/api/cart/coupon` | Quitar el cupón aplicado. |
 | POST 🔒 | `/api/checkout` | `{ address_id, payment_method_id, delivery_method, notes? }` → crea el pedido. |
 | GET 🔒 | `/api/orders/{orderNumber}` | Confirmación/detalle del pedido (solo el dueño; 404 si no es suyo). |
 | POST 🔒 | `/api/notifications/subscribe` | `{ token, platform? }` — suscribe este dispositivo a push (sección 24; sin proveedor real, solo se registra en el log). |
@@ -147,6 +149,9 @@ Las rutas marcadas con 🔒 requieren `Authorization: Bearer <token>` (JWT obten
 | GET | `/api/payment-methods` | Métodos de pago habilitados (para que el checkout sepa qué mostrar); nunca incluye `config`. |
 | GET 🔒 | `/api/admin/payment-methods` | TODOS los métodos, con `config` (`manage-payment-methods`). |
 | PUT 🔒 | `/api/admin/payment-methods/{id}` | `{ is_enabled, config? }` — activar/desactivar y configurar (`manage-payment-methods`, sección 21). |
+| GET/POST 🔒 | `/api/admin/coupons` | Listar/crear cupones (`manage-coupons`, sección 30). |
+| PUT/DELETE 🔒 | `/api/admin/coupons/{id}` | Editar/eliminar cupón (`manage-coupons`). |
+| PUT 🔒 | `/api/admin/customers/{id}/role` | `{ role }` — cambiar el rol de un usuario (`manage-roles`, distinto de `manage-users`; no se puede cambiar el propio rol). |
 | GET 🔒 | `/api/admin/orders` | Listar pedidos (`manage-orders`), filtro `status`. |
 | GET 🔒 | `/api/admin/orders/{orderNumber}` | Detalle de cualquier pedido (`manage-orders`). |
 | PUT 🔒 | `/api/admin/orders/{orderNumber}/status` | Cambiar estado `{ status, comment? }` (`manage-orders`), valida la transición. |
@@ -246,11 +251,12 @@ Antes de desplegar a producción:
 
 ## Próximas fases
 
-~~Fase 7: métodos de pago configurables~~ (lista, ver "Métodos de pago" en `/admin`) · ~~Fase 8: correos + notificaciones~~ (correos del ciclo de vida del pedido listos; push con arquitectura preparada pero sin proveedor real ni UI de permiso en el navegador) · Fase 9: resto del dashboard administrador (roles/permisos, cupones, configuración general) · Fase 10: dashboard vendedor (incluye gestión de tiendas y restricción "solo mis productos") · Fase 11: IA · Fase 12: testing + seguridad + optimización formal.
+~~Fase 7: métodos de pago configurables~~ (lista, ver "Métodos de pago" en `/admin`) · ~~Fase 8: correos + notificaciones~~ (correos del ciclo de vida del pedido listos; push con arquitectura preparada pero sin proveedor real ni UI de permiso en el navegador) · ~~Fase 9: dashboard administrador~~ (roles, cupones y el resto de las pestañas listas — falta un editor de configuración general del sitio) · Fase 10: dashboard vendedor (incluye gestión de tiendas y restricción "solo mis productos") · Fase 11: IA · Fase 12: testing + seguridad + optimización formal.
 
 **Notas de alcance:**
 - Cualquier usuario con permiso `manage-products`/`manage-services`/`manage-categories`/`manage-brands` puede gestionar todo el catálogo (no hay aún restricción "solo mi tienda") — eso se ajusta en la Fase 10.
 - El checkout requiere iniciar sesión (`orders.user_id` no es nulo); se puede armar el carrito como invitado, pero confirmar el pedido no.
-- Los cupones (`coupons`) no se aplican todavía en el carrito/checkout: no tienen fase asignada explícita en el prompt maestro.
-- El panel `/admin` ya no es básico: Resumen, Pedidos, Reservas, Clientes, Inventario, Servicios, Productos, Marcas y Métodos de pago — falta roles/permisos y cupones/promociones (resto de la Fase 9) y todo lo de vendedor/tiendas (Fase 10).
+- Los cupones (sección 30) aplican al carrito completo (con compra mínima, vigencia y límite de usos) — no a productos o categorías puntuales; eso ya lo cubre el descuento por producto (`discount_percentage`, Fase 3).
+- El panel `/admin` ya no es básico: Resumen, Pedidos, Reservas, Clientes (con cambio de rol), Inventario, Servicios, Productos, Marcas, Métodos de pago y Cupones. Falta un editor de configuración general del sitio y todo lo de vendedor/tiendas (Fase 10).
 - Tarjeta/Wompi/Mercado Pago/PayU/Stripe están arquitecturalmente listas (`PaymentGatewayInterface`, ver `docs/ARCHITECTURE.md`) pero sin credenciales reales — activarlas sin configurar sus llaves hace que el checkout las rechace con un mensaje claro en vez de fingir que cobran.
+- **Despliegue**: el `<base href>` de cada página se calcula solo según el dominio (`localhost`/`127.0.0.1` → `/proyectos/castamotos/`; cualquier otro host, ej. `castamotos.com` → `/`) — no hace falta editar nada al pasar de local a producción, más allá de `APP_URL`/credenciales de BD en `backend/.env`.

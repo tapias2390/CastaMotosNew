@@ -135,6 +135,7 @@ $router->put('api/admin/orders/{orderNumber}/status', [AdminOrderController::cla
 $router->get('api/admin/reservations', [AdminReservationController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 $router->get('api/admin/dashboard/summary', [DashboardController::class, 'summary'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-orders')]);
 $router->get('api/admin/customers', [AdminCustomerController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-users')]);
+$router->put('api/admin/customers/{id}/role', [AdminCustomerController::class, 'updateRole'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-roles')]);
 $router->get('api/admin/coupons', [AdminCouponController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-coupons')]);
 $router->post('api/admin/coupons', [AdminCouponController::class, 'store'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-coupons')]);
 $router->put('api/admin/coupons/{id}', [AdminCouponController::class, 'update'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-coupons')]);
