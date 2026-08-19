@@ -32,37 +32,42 @@ function renderHeaderShell() {
           </form>
         </div>
         <nav class="site-header__actions">
-          <button class="icon-btn" id="lang-toggle-btn" type="button" aria-label="${i18nService.t('lang.toggle.aria')}" style="font-weight:700;">
-            ${i18nService.current() === 'es' ? 'EN' : 'ES'}
+          <button class="icon-btn site-header__mobile-toggle" id="mobile-actions-toggle" type="button" aria-label="${i18nService.t('nav.menu')}" aria-haspopup="true" aria-expanded="false">
+            ☰
           </button>
-          <button class="icon-btn" id="theme-toggle-btn" type="button" aria-label="${themeService.current() === 'light' ? i18nService.t('theme.toggle.toDark') : i18nService.t('theme.toggle.toLight')}">
-            ${themeService.current() === 'light' ? '☀️' : '🌙'}
-          </button>
-          ${user ? `
-          <div class="notif-bell" id="notif-bell">
-            <button class="icon-btn" id="notif-toggle-btn" type="button" aria-label="${i18nService.t('notif.aria')}" aria-haspopup="true" aria-expanded="false">
-              🔔<span class="badge-count" id="notif-badge" hidden>0</span>
+          <div class="site-header__actions-menu" id="site-header-actions-menu">
+            <button class="icon-btn" id="lang-toggle-btn" type="button" aria-label="${i18nService.t('lang.toggle.aria')}" style="font-weight:700;">
+              ${i18nService.current() === 'es' ? 'EN' : 'ES'}
             </button>
-            <div class="notif-panel" id="notif-panel" hidden>
-              <div class="notif-panel__header">
-                <span>${i18nService.t('notif.title')}</span>
-                <button type="button" id="notif-mark-all-btn">${i18nService.t('notif.markAllRead')}</button>
-              </div>
-              <div class="notif-panel__list" id="notif-list">
-                <p class="loading-state" style="padding:12px;">${i18nService.t('nav.loading')}</p>
+            <button class="icon-btn" id="theme-toggle-btn" type="button" aria-label="${themeService.current() === 'light' ? i18nService.t('theme.toggle.toDark') : i18nService.t('theme.toggle.toLight')}">
+              ${themeService.current() === 'light' ? '☀️' : '🌙'}
+            </button>
+            ${user ? `
+            <div class="notif-bell" id="notif-bell">
+              <button class="icon-btn" id="notif-toggle-btn" type="button" aria-label="${i18nService.t('notif.aria')}" aria-haspopup="true" aria-expanded="false">
+                🔔<span class="badge-count" id="notif-badge" hidden>0</span>
+              </button>
+              <div class="notif-panel" id="notif-panel" hidden>
+                <div class="notif-panel__header">
+                  <span>${i18nService.t('notif.title')}</span>
+                  <button type="button" id="notif-mark-all-btn">${i18nService.t('notif.markAllRead')}</button>
+                </div>
+                <div class="notif-panel__list" id="notif-list">
+                  <p class="loading-state" style="padding:12px;">${i18nService.t('nav.loading')}</p>
+                </div>
               </div>
             </div>
+            ` : ''}
+            ${user ? `<a class="icon-btn" href="favoritos" aria-label="${i18nService.t('nav.favorites')}">♥</a>` : ''}
+            <a class="icon-btn" href="carrito" aria-label="${i18nService.t('nav.cart')}">
+              🛒<span class="badge-count" id="cart-badge" hidden>0</span>
+            </a>
+            ${isAdminUser(user) ? `<a class="icon-btn" href="admin">${i18nService.t('nav.admin')}</a>` : ''}
+            ${user
+              ? `<a href="perfil" style="font-size:0.85rem;color:var(--gris-texto);">${i18nService.t('nav.greeting')} <strong style="color:var(--blanco)">${helpers.escapeHtml(user.name)}</strong></a>
+                 <button class="icon-btn" id="logout-btn">${i18nService.t('nav.logout')}</button>`
+              : `<button class="icon-btn" id="open-login-btn">${i18nService.t('nav.login')}</button>`}
           </div>
-          ` : ''}
-          ${user ? `<a class="icon-btn" href="favoritos" aria-label="${i18nService.t('nav.favorites')}">♥</a>` : ''}
-          <a class="icon-btn" href="carrito" aria-label="${i18nService.t('nav.cart')}">
-            🛒<span class="badge-count" id="cart-badge" hidden>0</span>
-          </a>
-          ${isAdminUser(user) ? `<a class="icon-btn" href="admin">${i18nService.t('nav.admin')}</a>` : ''}
-          ${user
-            ? `<a href="perfil" style="font-size:0.85rem;color:var(--gris-texto);">${i18nService.t('nav.greeting')} <strong style="color:var(--blanco)">${helpers.escapeHtml(user.name)}</strong></a>
-               <button class="icon-btn" id="logout-btn">${i18nService.t('nav.logout')}</button>`
-            : `<button class="icon-btn" id="open-login-btn">${i18nService.t('nav.login')}</button>`}
         </nav>
       </div>
       <div class="category-nav">
@@ -75,9 +80,16 @@ function renderHeaderShell() {
               <p class="loading-state" style="padding:8px 10px;">${i18nService.t('nav.loading')}</p>
             </div>
           </div>
-          <a href="productos">${i18nService.t('nav.allProducts')}</a>
-          <a href="productos?on_sale=1">${i18nService.t('nav.deals')}</a>
-          <a href="servicios">${i18nService.t('nav.services')}</a>
+          <div class="category-nav__links-wrap">
+            <button class="category-nav__toggle category-nav__links-toggle" id="nav-links-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+              ☰ ${i18nService.t('nav.menu')} <span class="category-nav__caret">▾</span>
+            </button>
+            <div class="category-nav__links" id="nav-links-menu">
+              <a href="productos">${i18nService.t('nav.allProducts')}</a>
+              <a href="productos?on_sale=1">${i18nService.t('nav.deals')}</a>
+              <a href="servicios">${i18nService.t('nav.services')}</a>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -111,6 +123,7 @@ function renderHeaderShell() {
 
   loadCategoryNav();
   initCategoryDropdown();
+  wireDropdownToggle('mobile-actions-toggle', 'site-header-actions-menu', '__mobileActionsOutsideClickBound');
   refreshCartBadge();
   helpers.initPasswordToggles(mount);
 
@@ -258,9 +271,18 @@ async function loadCategoryNav() {
   }
 }
 
-function initCategoryDropdown() {
-  const toggle = document.getElementById('category-dropdown-toggle');
-  const menu = document.getElementById('category-dropdown-menu');
+/**
+ * Cablea un dropdown genérico (toggle + panel que se abre/cierra con
+ * .is-open) — usado por el de Categorías Y el de "Menú" (Todos los
+ * productos/Ofertas/Servicios en mobile, ver category-nav__links-toggle).
+ * Un solo listener global de "click afuera cierra" por par, guardado en
+ * window[boundFlag] porque renderHeaderShell() se puede volver a llamar
+ * (login/logout/cambio de idioma) y no se puede cerrar sobre referencias
+ * puntuales de una llamada anterior.
+ */
+function wireDropdownToggle(toggleId, menuId, boundFlag) {
+  const toggle = document.getElementById(toggleId);
+  const menu = document.getElementById(menuId);
   if (!toggle || !menu) return;
 
   toggle.addEventListener('click', () => {
@@ -269,15 +291,11 @@ function initCategoryDropdown() {
     toggle.setAttribute('aria-expanded', String(willOpen));
   });
 
-  // Un solo listener para toda la vida de la página (igual que el dropdown
-  // de compartir en producto.js): renderHeaderShell() se puede volver a
-  // llamar, así que se busca el toggle/menú vigente por id en cada click en
-  // vez de cerrar sobre estas referencias puntuales.
-  if (!window.__categoryDropdownOutsideClickBound) {
-    window.__categoryDropdownOutsideClickBound = true;
+  if (!window[boundFlag]) {
+    window[boundFlag] = true;
     document.addEventListener('click', (event) => {
-      const currentToggle = document.getElementById('category-dropdown-toggle');
-      const currentMenu = document.getElementById('category-dropdown-menu');
+      const currentToggle = document.getElementById(toggleId);
+      const currentMenu = document.getElementById(menuId);
       if (!currentToggle || !currentMenu) return;
 
       if (!currentToggle.contains(event.target) && !currentMenu.contains(event.target)) {
@@ -286,6 +304,11 @@ function initCategoryDropdown() {
       }
     });
   }
+}
+
+function initCategoryDropdown() {
+  wireDropdownToggle('category-dropdown-toggle', 'category-dropdown-menu', '__categoryDropdownOutsideClickBound');
+  wireDropdownToggle('nav-links-toggle', 'nav-links-menu', '__navLinksOutsideClickBound');
 }
 
 async function refreshCartBadge() {

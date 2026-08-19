@@ -45,7 +45,7 @@ function renderServiceDetail(service) {
       ${breadcrumbCategory ? ` › ${breadcrumbCategory}` : ''} › <span aria-current="page">${helpers.escapeHtml(service.name)}</span>
     </nav>
     <div class="detail-grid mt-16">
-      ${gallery360Markup(serviceImageUrls(service), service.name)}
+      ${gallery360Markup(serviceImageUrls(service), service.name, washPlaceholderMarkup(service.slug))}
       <div>
         <h1>${helpers.escapeHtml(service.name)}</h1>
         ${service.category_name ? `<p style="color:var(--gris-texto);">${helpers.escapeHtml(service.category_name)}</p>` : ''}

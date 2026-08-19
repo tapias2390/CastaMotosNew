@@ -18,9 +18,14 @@
 const GALLERY_ZOOM_FACTOR = 2.5;
 const GALLERY_DRAG_THRESHOLD_PX = 6; // más que esto entre down/up = fue un arrastre, no un click
 
-function gallery360Markup(images, altText) {
+function gallery360Markup(images, altText, placeholderMarkup) {
   if (images.length === 0) {
-    return `<div class="detail-gallery"><div class="detail-gallery__main"><span id="gallery-main-img">Sin imagen disponible</span></div></div>`;
+    // placeholderMarkup (opcional): reemplazo animado para ítems sin foto
+    // real todavía — hoy solo "Lavado de Moto"/"Lavado de Casco", ver
+    // cards.js washPlaceholderMarkup(). Cualquier otro caso sigue con el
+    // texto genérico de siempre.
+    const content = placeholderMarkup || '<span id="gallery-main-img">Sin imagen disponible</span>';
+    return `<div class="detail-gallery"><div class="detail-gallery__main">${content}</div></div>`;
   }
 
   const canRotate = images.length > 1;

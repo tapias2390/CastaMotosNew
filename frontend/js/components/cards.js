@@ -3,6 +3,31 @@
  * FavoriteButton). Cada función devuelve el HTML como string; wireCardEvents()
  * delega los clicks de "favorito" de todas las tarjetas ya insertadas.
  */
+const WASH_PLACEHOLDER_ICONS = { 'lavado-de-moto': '🏍️', 'lavado-de-casco': '🪖' };
+
+/**
+ * "Lavado de Moto"/"Lavado de Casco" (sección 52) no tienen foto real
+ * todavía — en vez del "Sin imagen" genérico de cualquier tarjeta sin foto,
+ * un placeholder animado (ícono + burbujas subiendo, mismo lenguaje visual
+ * que .wash-cta del home). null para cualquier otro producto/servicio, que
+ * sigue con su imagen real o el "Sin imagen" de siempre.
+ */
+function washPlaceholderMarkup(slug) {
+  const icon = WASH_PLACEHOLDER_ICONS[slug];
+  if (!icon) return null;
+
+  return `
+    <div class="wash-placeholder" aria-hidden="true">
+      <span class="wash-placeholder__icon">${icon}</span>
+      <span class="wash-placeholder__bubble wash-placeholder__bubble--1"></span>
+      <span class="wash-placeholder__bubble wash-placeholder__bubble--2"></span>
+      <span class="wash-placeholder__bubble wash-placeholder__bubble--3"></span>
+      <span class="wash-placeholder__bubble wash-placeholder__bubble--4"></span>
+      <span class="wash-placeholder__bubble wash-placeholder__bubble--5"></span>
+    </div>
+  `;
+}
+
 function productCardMarkup(product) {
   const image = helpers.mediaUrl('products', product.primary_image || product.image);
   const hasDiscount = product.previous_price && Number(product.previous_price) > Number(product.price);
@@ -40,11 +65,12 @@ function productCardMarkup(product) {
 function serviceCardMarkup(service) {
   const image = helpers.mediaUrl('services', service.primary_image || service.image);
   const name = helpers.localized(service, 'name');
+  const washPlaceholder = washPlaceholderMarkup(service.slug);
 
   return `
     <a class="card" href="servicio/${encodeURIComponent(service.slug)}" data-card-type="service" data-card-id="${service.id}">
       <div class="card__image">
-        ${image ? `<img src="${image}" alt="${helpers.escapeHtml(name)}" loading="lazy">` : i18nService.t('card.noImage')}
+        ${image ? `<img src="${image}" alt="${helpers.escapeHtml(name)}" loading="lazy">` : (washPlaceholder || i18nService.t('card.noImage'))}
         <button class="card__favorite ${service.is_favorite ? 'is-active' : ''}" data-favorite-type="service" data-favorite-id="${service.id}" aria-label="${i18nService.t('card.favorite')}" onclick="event.preventDefault();">♥</button>
       </div>
       <div class="card__body">

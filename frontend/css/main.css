@@ -199,6 +199,85 @@ textarea {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  position: relative;
+}
+
+/* Botón "☰" único (mobile): agrupa tema/idioma/notificaciones/favoritos/
+   carrito/sesión en un solo dropdown en vez de una fila de íconos sueltos.
+   Oculto en escritorio — ahí siguen visibles como siempre. */
+.site-header__mobile-toggle {
+  display: none;
+}
+/* "display: contents" en escritorio: el wrapper desaparece del layout y sus
+   hijos (tema/idioma/etc.) actúan como si fueran flex items directos de
+   .site-header__actions, IGUAL que antes de agregar el wrapper — cero
+   cambio visual en desktop/tablet. Se pisa en la media query de mobile. */
+.site-header__actions-menu {
+  display: contents;
+}
+@media (max-width: 640px) {
+  .site-header__mobile-toggle {
+    display: flex;
+  }
+  .site-header__actions-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    position: absolute;
+    z-index: 190;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 220px;
+    background: var(--gris-oscuro);
+    border: 1px solid var(--gris-borde);
+    border-radius: var(--radio-sm);
+    box-shadow: var(--sombra);
+    padding: 10px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top right;
+    pointer-events: none;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease,
+      visibility 0s linear 0.16s;
+  }
+  .site-header__actions-menu.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease;
+  }
+  .site-header__actions-menu .icon-btn,
+  .site-header__actions-menu a.icon-btn,
+  .site-header__actions-menu > a {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .site-header__actions-menu .notif-bell {
+    width: 100%;
+  }
+  .site-header__actions-menu .notif-bell .icon-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  /* La campanita adentro del ☰ abre su propio panel flotando a la izquierda
+     del drawer (que ya está pegado al borde derecho) — a la derecha se
+     saldría de la pantalla. */
+  .site-header__actions-menu .notif-panel {
+    right: auto;
+    left: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .site-header__actions-menu {
+      transition: none;
+    }
+  }
 }
 
 .notif-bell {
@@ -352,34 +431,18 @@ textarea {
   .site-header__logo span {
     display: none;
   }
-  .site-header__actions #open-login-btn {
-    padding: 8px;
-    font-size: 0;
+  /* Sin esto, .site-header__actions (ahora angosto: solo contiene el botón
+     ☰) queda pegado al logo del lado izquierdo — el dropdown, anclado con
+     "right: 0" a ESE contenedor angosto, se salía de la pantalla por la
+     izquierda. Empujarlo al borde derecho de la fila lo deja donde
+     cualquiera espera encontrar el menú hamburguesa. */
+  .site-header__actions {
+    margin-left: auto;
   }
-  .site-header__actions #open-login-btn::before {
-    content: "👤";
-    font-size: 0.95rem;
-  }
-  /* Usuario logueado: el saludo "Hola, Nombre" es decorativo (el perfil
-     sigue accesible desde el footer) — se oculta para dejar lugar a los
-     botones de verdad (Admin/Salir), que pasan a ícono-solo igual que
-     "Iniciar sesión" arriba. */
-  .site-header__actions a[href="perfil"] {
-    display: none;
-  }
-  .site-header__actions #logout-btn,
-  .site-header__actions a.icon-btn[href="admin"] {
-    padding: 8px;
-    font-size: 0;
-  }
-  .site-header__actions #logout-btn::before {
-    content: "🚪";
-    font-size: 0.95rem;
-  }
-  .site-header__actions a.icon-btn[href="admin"]::before {
-    content: "🛠️";
-    font-size: 0.95rem;
-  }
+  /* Nota: acá NO hay más reglas de "ícono-solo" para Salir/Admin/saludo —
+     ahora viven dentro del drawer del ☰ (.site-header__actions-menu, ver
+     más arriba), con espacio de sobra para el texto completo en su propia
+     fila. Antes competían por ancho en una sola línea, por eso se recortaban. */
 }
 
 .btn {
@@ -552,6 +615,24 @@ textarea {
      categorías — con pocos accesos curados alcanza con que envuelvan
      (flex-wrap) en pantallas angostas, no hace falta scroll horizontal. */
 }
+.category-nav__links-wrap {
+  position: relative;
+}
+/* Escritorio/tablet: los 3 links van sueltos en la barra, como siempre. El
+   botón "☰ Menú" (mobile) queda oculto — ver media query de abajo.
+   Selector con el wrapper (no ".category-nav__links-toggle" solo) a propósito:
+   este botón también tiene la clase ".category-nav__toggle" (mismo estilo
+   base que el de Categorías) y esa regla define "display: flex" más abajo en
+   el archivo — con la misma especificidad, gana la que viene después en el
+   cascade, así que hace falta MÁS especificidad acá, no solo orden. */
+.category-nav__links-wrap .category-nav__links-toggle {
+  display: none;
+}
+.category-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
 .category-nav a {
   color: var(--negro);
   font-size: 0.82rem;
@@ -564,6 +645,60 @@ textarea {
 
 .category-nav__dropdown {
   position: relative;
+}
+@media (max-width: 480px) {
+  /* Celular angosto: en vez de que "Todos los productos/Ofertas/Servicios"
+     compitan por ancho en la barra (se veían amontonados o partidos en dos
+     líneas), se esconden detrás de un botón "☰ Menú" — mismo dropdown
+     animado que "☰ Categorías" (opacity/transform, ver .category-nav__menu),
+     nada de scroll horizontal escondido que el usuario podría no descubrir. */
+  .category-nav__links-wrap .category-nav__links-toggle {
+    display: flex;
+  }
+  .category-nav__links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    position: absolute;
+    z-index: 150;
+    top: calc(100% + 10px);
+    left: 0;
+    min-width: 200px;
+    background: var(--gris-oscuro);
+    border: 1px solid var(--gris-borde);
+    border-radius: var(--radio-sm);
+    box-shadow: var(--sombra);
+    padding: 10px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top left;
+    pointer-events: none;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease,
+      visibility 0s linear 0.16s;
+  }
+  .category-nav__links a {
+    color: var(--blanco);
+    padding: 8px 6px;
+    width: 100%;
+  }
+  .category-nav__links.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .category-nav__links {
+      transition: none;
+    }
+  }
 }
 .category-nav__toggle {
   display: flex;
@@ -588,7 +723,9 @@ textarea {
    lista vertical larga — todas las categorías al mismo nivel, sin anidar
    padre/hijas, para que quepa en pocas líneas. */
 .category-nav__menu {
-  display: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   position: absolute;
   z-index: 150;
   top: calc(100% + 10px);
@@ -601,11 +738,33 @@ textarea {
   box-shadow: var(--sombra);
   padding: 10px;
   white-space: normal;
+  /* Animado (antes era display:none/flex instantáneo): opacity+transform en
+     vez de tocar "display" directamente, porque display no es animable —
+     visibility con delay evita que el panel intercepte clicks/tab mientras
+     está "cerrado" pero técnicamente sigue en el DOM con display:flex. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top left;
+  pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    visibility 0s linear 0.16s;
 }
 .category-nav__menu.is-open {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .category-nav__menu {
+    transition: none;
+  }
 }
 .category-nav__menu a {
   color: var(--blanco);
@@ -978,6 +1137,115 @@ textarea {
   height: 100%;
   object-fit: cover;
 }
+/* Placeholder animado para "Lavado de Moto"/"Lavado de Casco" (sección de
+   lavados, sin foto real todavía) — mismo lenguaje visual que .wash-cta del
+   home (ícono + burbujas subiendo) en vez del "Sin imagen" genérico de
+   cualquier otra tarjeta sin foto. Ver cards.js: washPlaceholderMarkup(). */
+.wash-placeholder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--superficie-imagen), rgba(255, 193, 7, 0.12));
+}
+.wash-placeholder__icon {
+  font-size: 3rem;
+  position: relative;
+  z-index: 1;
+  animation: wash-placeholder-bob 3s ease-in-out infinite;
+}
+/* La misma tarjeta se usa en un contenedor chico (grilla, 190px de alto) y
+   uno grande (galería del detalle, cuadrado ~460px) — se agranda el ícono
+   en ese segundo caso para que no se vea perdido en el centro. */
+.detail-gallery__main .wash-placeholder__icon {
+  font-size: 6rem;
+}
+@keyframes wash-placeholder-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.wash-placeholder__bubble {
+  position: absolute;
+  bottom: 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(13, 13, 13, 0.12);
+  animation: wash-placeholder-bubble 3.4s ease-in infinite;
+}
+.wash-placeholder__bubble--1 {
+  left: 22%;
+  width: 8px;
+  height: 8px;
+  animation-delay: 0s;
+}
+.wash-placeholder__bubble--2 {
+  left: 38%;
+  width: 6px;
+  height: 6px;
+  animation-delay: 0.7s;
+}
+.wash-placeholder__bubble--3 {
+  left: 52%;
+  width: 10px;
+  height: 10px;
+  animation-delay: 1.4s;
+}
+.wash-placeholder__bubble--4 {
+  left: 66%;
+  width: 7px;
+  height: 7px;
+  animation-delay: 2.1s;
+}
+.wash-placeholder__bubble--5 {
+  left: 78%;
+  width: 5px;
+  height: 5px;
+  animation-delay: 2.8s;
+}
+@keyframes wash-placeholder-bubble {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-150px) scale(1);
+    opacity: 0;
+  }
+}
+@keyframes wash-placeholder-bubble-lg {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-380px) scale(1.6);
+    opacity: 0;
+  }
+}
+.detail-gallery__main .wash-placeholder__bubble {
+  animation-name: wash-placeholder-bubble-lg;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wash-placeholder__icon,
+  .wash-placeholder__bubble {
+    animation: none;
+  }
+}
+
 .card__discount-badge {
   position: absolute;
   top: 8px;
