@@ -62,8 +62,32 @@ final class PdoOrderRepository implements OrderRepositoryInterface
              ORDER BY created_at DESC'
         );
         $stmt->execute(['user_id' => $userId]);
+        $orders = $stmt->fetchAll();
 
-        return $stmt->fetchAll();
+        // Miniatura representativa por pedido (el primer ítem) para la
+        // lista "Mis pedidos" — los order_items no guardan una foto propia
+        // (solo snapshot de nombre/precio/sku), así que se busca la imagen
+        // ACTUAL del producto/servicio; si ya no existe (borrado), queda sin
+        // miniatura en vez de romper el listado.
+        $thumbnailStmt = $this->connection->prepare(
+            'SELECT oi.product_id, oi.service_id,
+                    (SELECT url FROM product_images WHERE product_id = oi.product_id
+                        ORDER BY is_primary DESC, sort_order ASC LIMIT 1) AS product_image,
+                    (SELECT url FROM service_images WHERE service_id = oi.service_id
+                        ORDER BY sort_order ASC LIMIT 1) AS service_image
+             FROM order_items oi WHERE oi.order_id = :order_id ORDER BY oi.id ASC LIMIT 1'
+        );
+
+        foreach ($orders as &$order) {
+            $thumbnailStmt->execute(['order_id' => $order['id']]);
+            $item = $thumbnailStmt->fetch();
+
+            $order['thumbnail'] = $item !== false ? ($item['product_image'] ?? $item['service_image']) : null;
+            $order['thumbnail_type'] = ($item !== false && $item['product_id'] !== null) ? 'products' : 'services';
+        }
+        unset($order);
+
+        return $orders;
     }
 
     public function createFromCheckout(array $order): array

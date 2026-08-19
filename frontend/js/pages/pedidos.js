@@ -5,9 +5,14 @@
  * línea de tiempo completa de cambios de estado (ver pedido.js).
  */
 function orderListItemMarkup(order) {
+  const image = helpers.mediaUrl(order.thumbnail_type, order.thumbnail);
+
   return `
     <a class="order-list-item" href="pedido/${encodeURIComponent(order.order_number)}">
-      <div>
+      <div class="order-list-item__thumb">
+        ${image ? `<img src="${image}" alt="">` : '<span class="order-list-item__thumb-placeholder">🏍️</span>'}
+      </div>
+      <div class="order-list-item__info">
         <div class="order-list-item__number">${helpers.escapeHtml(order.order_number)}</div>
         <div class="order-list-item__meta">${helpers.formatDateTime(order.created_at)} · ${order.delivery_method === 'recogida_tienda' ? 'Recogida en tienda' : 'Entrega a domicilio'}</div>
       </div>
