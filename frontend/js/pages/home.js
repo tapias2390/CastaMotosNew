@@ -18,56 +18,31 @@ async function loadHomeCategories() {
       return;
     }
 
-    mount.innerHTML = `<div class="grid grid--compact">${chips.map((cat) => `
+    // Carrusel animado (desplazamiento automático continuo, sección 41):
+    // el track se pinta DOS VECES seguidas y la animación CSS lo corre de
+    // 0% a -50% — como la segunda copia es idéntica a la primera, al llegar
+    // a -50% se ve exactamente igual que al arrancar en 0%, así que el loop
+    // es perfecto sin ningún salto ni parpadeo. Se pausa al pasar el mouse
+    // (o con foco de teclado) para poder leer/hacer click sin que se mueva.
+    const chipMarkup = (cat) => `
       <a class="card category-chip" href="categoria/${encodeURIComponent(cat.slug)}">
         <div class="card__body text-center">
           <span class="card__icon">${helpers.categoryIcon(cat.slug)}</span>
           <span class="card__name">${helpers.escapeHtml(cat.name)}</span>
         </div>
       </a>
-    `).join('')}</div>`;
+    `;
+
+    mount.innerHTML = `
+      <div class="category-carousel">
+        <div class="category-carousel__track">
+          ${chips.map(chipMarkup).join('')}
+          <span aria-hidden="true" style="display:contents;">${chips.map(chipMarkup).join('')}</span>
+        </div>
+      </div>
+    `;
   } catch (error) {
     mount.innerHTML = `<p class="error-state">No fue posible cargar las categorías.</p>`;
-  }
-}
-
-/**
- * Carrusel de fotos reales al inicio: primero intenta con productos en
- * oferta de verdad (discount_percentage > 0); si no hay ninguno todavía,
- * cae a los más nuevos — nunca se inventa una promoción ni se deja un
- * carrusel vacío si hay CUALQUIER producto real para mostrar.
- */
-async function loadHeroCarousel() {
-  const mount = document.getElementById('home-carousel-mount');
-  if (!mount) return;
-
-  try {
-    let result = await catalogService.products({ on_sale: 1, per_page: 6 });
-    if (result.data.length === 0) {
-      result = await catalogService.products({ sort: 'newest', per_page: 6 });
-    }
-    if (result.data.length === 0) return; // sin catálogo todavía: no hay nada real que mostrar
-
-    const slides = result.data
-      .filter((product) => product.primary_image || product.image)
-      .map((product) => {
-        const hasDiscount = product.previous_price && Number(product.previous_price) > Number(product.price);
-        return {
-          image: helpers.mediaUrl('products', product.primary_image || product.image),
-          title: product.name,
-          subtitle: hasDiscount
-            ? `${helpers.formatCurrency(product.price)} · antes ${helpers.formatCurrency(product.previous_price)}`
-            : helpers.formatCurrency(product.price),
-          href: `producto/${encodeURIComponent(product.slug)}`,
-        };
-      });
-
-    if (slides.length === 0) return;
-
-    mount.innerHTML = carouselMarkup('home-carousel', slides);
-    initCarousel('home-carousel');
-  } catch (error) {
-    console.error('No fue posible cargar el carrusel de destacados.', error);
   }
 }
 
@@ -140,7 +115,6 @@ function wireHomeSearch() {
 
 document.addEventListener('DOMContentLoaded', () => {
   wireHomeSearch();
-  loadHeroCarousel();
   loadHomeCategories();
   loadDeals();
   loadFeaturedProducts();

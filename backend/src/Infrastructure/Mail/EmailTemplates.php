@@ -41,20 +41,95 @@ final class EmailTemplates
     /**
      * "Se crea pedido" (sección 23) — el primer correo del ciclo de vida,
      * apenas se confirma el checkout (estado inicial siempre PENDIENTE).
+     * A diferencia de orderStatusEmail() de abajo, este SÍ es el recibo
+     * completo (ítems, dirección, pago, desglose) — el resto del ciclo son
+     * solo avisos cortos de "tu pedido pasó a X", no hace falta repetir todo.
+     *
+     * @param array $order Payload armado en CheckoutUseCase: order_number,
+     *   items[], subtotal, discount_total, tax_total, shipping_total, total,
+     *   delivery_method, payment_method_name, address (puede ser null si la
+     *   dirección se borró entretanto — no debería pasar, pero no se asume).
      */
-    public static function orderCreatedEmail(string $name, string $orderNumber, float $total, string $orderUrl): array
+    public static function orderCreatedEmail(string $name, array $order, string $orderUrl): array
     {
         return [
-            'subject' => "Recibimos tu pedido {$orderNumber} — CASTAMOTO",
+            'subject' => "Recibimos tu pedido {$order['order_number']} — CASTAMOTO",
             'html' => self::layout(
                 '¡Gracias por tu compra!',
                 "<p>Hola {$name},</p>
-                <p>Recibimos tu pedido <strong>{$orderNumber}</strong> por un total de " . self::formatCop($total) . ".</p>
-                <p>Te avisaremos por correo en cada paso: cuando se confirme, cuando el pago quede confirmado, cuando esté en preparación, en camino y entregado.</p>",
+                <p>Recibimos tu pedido <strong>{$order['order_number']}</strong> y ya lo estamos procesando. Acá el resumen completo:</p>"
+                . self::itemsTable($order['items'])
+                . self::totalsBlock($order)
+                . self::deliveryBlock($order)
+                . "<p>Te avisaremos por correo en cada paso: cuando se confirme, cuando el pago quede confirmado, cuando esté en preparación, en camino y entregado.</p>",
                 $orderUrl,
                 'Ver mi pedido'
             ),
         ];
+    }
+
+    /** Tabla de ítems del pedido (sección 23: "correo bien profesional... con toda la información"). */
+    private static function itemsTable(array $items): string
+    {
+        $rows = '';
+        foreach ($items as $item) {
+            $scheduleLine = !empty($item['scheduled_at'])
+                ? '<br><span style="color:#8a8a8a;font-size:12px;">Agendado: ' . htmlspecialchars(self::formatDate((string) $item['scheduled_at'])) . '</span>'
+                : '';
+            $rows .= '<tr>
+                <td style="padding:8px 0;border-bottom:1px solid #2c2c2c;">'
+                    . htmlspecialchars((string) $item['name_snapshot']) . ' × ' . (int) $item['quantity'] . $scheduleLine
+                . '</td>
+                <td style="padding:8px 0;border-bottom:1px solid #2c2c2c;text-align:right;white-space:nowrap;">' . self::formatCop((float) $item['subtotal']) . '</td>
+            </tr>';
+        }
+
+        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;font-size:14px;">' . $rows . '</table>';
+    }
+
+    private static function totalsBlock(array $order): string
+    {
+        $rows = [
+            ['Subtotal', (float) $order['subtotal']],
+            ['Descuento', -1 * (float) ($order['discount_total'] ?? 0)],
+            ['Impuestos', (float) ($order['tax_total'] ?? 0)],
+            ['Envío', (float) ($order['shipping_total'] ?? 0)],
+        ];
+
+        $html = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#b3b3b3;">';
+        foreach ($rows as [$label, $value]) {
+            $html .= "<tr><td style=\"padding:2px 0;\">{$label}</td><td style=\"padding:2px 0;text-align:right;\">" . self::formatCop($value) . '</td></tr>';
+        }
+        $html .= '<tr><td style="padding:8px 0 0;font-weight:bold;color:#f4c430;font-size:16px;">Total</td>'
+            . '<td style="padding:8px 0 0;font-weight:bold;color:#f4c430;font-size:16px;text-align:right;">' . self::formatCop((float) $order['total']) . '</td></tr>';
+        $html .= '</table>';
+
+        return $html;
+    }
+
+    private static function deliveryBlock(array $order): string
+    {
+        $deliveryLabel = $order['delivery_method'] === 'recogida_tienda' ? 'Recogida en tienda' : 'Entrega a domicilio';
+        $address = $order['address'] ?? null;
+
+        $addressLine = '';
+        if ($address !== null && $order['delivery_method'] !== 'recogida_tienda') {
+            $addressLine = '<br>' . htmlspecialchars(
+                trim("{$address['address_line']}, {$address['city']}, {$address['state']}")
+            );
+        }
+
+        return '<p style="margin:16px 0 4px;font-size:13px;color:#b3b3b3;">'
+            . "<strong style=\"color:#e6e6e6;\">Entrega:</strong> {$deliveryLabel}{$addressLine}<br>"
+            . '<strong style="color:#e6e6e6;">Pago:</strong> ' . htmlspecialchars((string) $order['payment_method_name'])
+            . '</p>';
+    }
+
+    private static function formatDate(string $value): string
+    {
+        $timestamp = strtotime(str_replace(' ', 'T', $value));
+
+        return $timestamp !== false ? date('d/m/Y h:i A', $timestamp) : $value;
     }
 
     /**

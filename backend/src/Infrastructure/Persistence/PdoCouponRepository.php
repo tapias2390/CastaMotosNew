@@ -133,4 +133,17 @@ final class PdoCouponRepository implements CouponRepositoryInterface
         $stmt = $this->connection->prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = :id');
         $stmt->execute(['id' => $id]);
     }
+
+    public function hasBeenUsedByUser(int $userId, int $couponId): bool
+    {
+        $stmt = $this->connection->prepare(
+            "SELECT 1 FROM orders
+             WHERE user_id = :user_id AND coupon_id = :coupon_id
+                AND status NOT IN ('CANCELADO', 'DEVUELTO')
+             LIMIT 1"
+        );
+        $stmt->execute(['user_id' => $userId, 'coupon_id' => $couponId]);
+
+        return (bool) $stmt->fetchColumn();
+    }
 }

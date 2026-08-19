@@ -35,19 +35,29 @@ function renderHeaderShell() {
           <button class="icon-btn" id="theme-toggle-btn" type="button" aria-label="${themeService.current() === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro'}">
             ${themeService.current() === 'light' ? '☀️' : '🌙'}
           </button>
+          ${user ? '<a class="icon-btn" href="favoritos" aria-label="Mis favoritos">♥</a>' : ''}
           <a class="icon-btn" href="carrito" aria-label="Carrito">
             🛒<span class="badge-count" id="cart-badge" hidden>0</span>
           </a>
           ${isAdminUser(user) ? '<a class="icon-btn" href="admin">Admin</a>' : ''}
           ${user
-            ? `<span style="font-size:0.85rem;color:var(--gris-texto);">Hola, <strong style="color:var(--blanco)">${helpers.escapeHtml(user.name)}</strong></span>
+            ? `<a href="perfil" style="font-size:0.85rem;color:var(--gris-texto);">Hola, <strong style="color:var(--blanco)">${helpers.escapeHtml(user.name)}</strong></a>
                <button class="icon-btn" id="logout-btn">Salir</button>`
             : `<button class="icon-btn" id="open-login-btn">Iniciar sesión</button>`}
         </nav>
       </div>
       <div class="category-nav">
-        <div class="container" id="category-nav-list">
+        <div class="container category-nav__bar">
+          <div class="category-nav__dropdown">
+            <button class="category-nav__toggle" id="category-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+              ☰ Categorías <span class="category-nav__caret">▾</span>
+            </button>
+            <div class="category-nav__menu" id="category-dropdown-menu">
+              <p class="loading-state" style="padding:8px 10px;">Cargando…</p>
+            </div>
+          </div>
           <a href="productos">Todos los productos</a>
+          <a href="productos?on_sale=1">Ofertas</a>
           <a href="servicios">Servicios</a>
         </div>
       </div>
@@ -79,20 +89,64 @@ function renderHeaderShell() {
   }
 
   loadCategoryNav();
+  initCategoryDropdown();
   refreshCartBadge();
+  helpers.initPasswordToggles(mount);
 }
 
 async function loadCategoryNav() {
-  const list = document.getElementById('category-nav-list');
-  if (!list) return;
+  const menu = document.getElementById('category-dropdown-menu');
+  if (!menu) return;
 
   try {
     const categories = await catalogService.categories();
-    const topLevel = categories.slice(0, 8);
-    list.innerHTML += topLevel.map((cat) => `<a href="categoria/${encodeURIComponent(cat.slug)}">${helpers.escapeHtml(cat.name)}</a>`).join('');
+
+    if (categories.length === 0) {
+      menu.innerHTML = '<p class="empty-state" style="padding:8px 10px;">Sin categorías todavía.</p>';
+      return;
+    }
+
+    // Chips en fila, todas al mismo nivel (una raíz con hijas muestra sus
+    // hijas, no la raíz misma — mismo criterio que loadHomeCategories() en
+    // home.js) — panel chico y horizontal, no una lista vertical larga.
+    const chips = categories.flatMap((cat) => (cat.children && cat.children.length > 0 ? cat.children : [cat]));
+    menu.innerHTML = chips.map((cat) =>
+      `<a href="categoria/${encodeURIComponent(cat.slug)}">${helpers.escapeHtml(cat.name)}</a>`
+    ).join('');
   } catch (error) {
     // La navegación de categorías es un "nice to have": si falla, el resto de la página sigue funcionando.
+    menu.innerHTML = '<p class="error-state" style="padding:8px 10px;">No fue posible cargar las categorías.</p>';
     console.error('No fue posible cargar las categorías del menú.', error);
+  }
+}
+
+function initCategoryDropdown() {
+  const toggle = document.getElementById('category-dropdown-toggle');
+  const menu = document.getElementById('category-dropdown-menu');
+  if (!toggle || !menu) return;
+
+  toggle.addEventListener('click', () => {
+    const willOpen = !menu.classList.contains('is-open');
+    menu.classList.toggle('is-open', willOpen);
+    toggle.setAttribute('aria-expanded', String(willOpen));
+  });
+
+  // Un solo listener para toda la vida de la página (igual que el dropdown
+  // de compartir en producto.js): renderHeaderShell() se puede volver a
+  // llamar, así que se busca el toggle/menú vigente por id en cada click en
+  // vez de cerrar sobre estas referencias puntuales.
+  if (!window.__categoryDropdownOutsideClickBound) {
+    window.__categoryDropdownOutsideClickBound = true;
+    document.addEventListener('click', (event) => {
+      const currentToggle = document.getElementById('category-dropdown-toggle');
+      const currentMenu = document.getElementById('category-dropdown-menu');
+      if (!currentToggle || !currentMenu) return;
+
+      if (!currentToggle.contains(event.target) && !currentMenu.contains(event.target)) {
+        currentMenu.classList.remove('is-open');
+        currentToggle.setAttribute('aria-expanded', 'false');
+      }
+    });
   }
 }
 
@@ -130,8 +184,12 @@ function authModalMarkup() {
           </div>
           <div class="form-group">
             <label for="login-password">Contraseña</label>
-            <input class="form-control" type="password" id="login-password" required>
+            <div class="password-field">
+              <input class="form-control" type="password" id="login-password" required>
+              <button type="button" class="password-toggle" data-target="login-password" aria-label="Mostrar contraseña"></button>
+            </div>
           </div>
+          <a class="auth-link" href="recuperar-password">¿Olvidaste tu contraseña?</a>
           <div class="form-error" id="login-error"></div>
           <button class="btn btn-primary btn-block" type="submit">Entrar</button>
         </form>
@@ -153,16 +211,22 @@ function authModalMarkup() {
           </div>
           <div class="form-group">
             <label for="register-password">Contraseña</label>
-            <input class="form-control" type="password" id="register-password" minlength="8" required>
+            <div class="password-field">
+              <input class="form-control" type="password" id="register-password" minlength="8" required>
+              <button type="button" class="password-toggle" data-target="register-password" aria-label="Mostrar contraseña"></button>
+            </div>
           </div>
           <div class="form-group">
             <label for="register-password-confirmation">Confirmar contraseña</label>
-            <input class="form-control" type="password" id="register-password-confirmation" minlength="8" required>
+            <div class="password-field">
+              <input class="form-control" type="password" id="register-password-confirmation" minlength="8" required>
+              <button type="button" class="password-toggle" data-target="register-password-confirmation" aria-label="Mostrar contraseña"></button>
+            </div>
           </div>
           <div class="form-group">
             <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">
               <input type="checkbox" id="register-terms" required style="width:auto;">
-              Acepto los términos y condiciones
+              Acepto los <a href="terminos" target="_blank" rel="noopener" style="color:var(--amarillo);text-decoration:underline;">términos y condiciones</a>
             </label>
           </div>
           <div class="form-error" id="register-error"></div>
@@ -264,15 +328,149 @@ function renderFooter() {
           </div>
           <div class="site-footer__col">
             <h3>Mi cuenta</h3>
+            <a href="perfil">Mi perfil</a>
+            <a href="pedidos">Mis pedidos</a>
             <a href="carrito">Carrito</a>
+            <a href="favoritos">Mis favoritos</a>
           </div>
         </div>
         <div class="site-footer__bottom">
-          Plataforma en construcción progresiva. © ${new Date().getFullYear()} CASTAMOTO
+          <a href="terminos">Términos y condiciones</a> · Plataforma en construcción progresiva. © ${new Date().getFullYear()} CASTAMOTO
         </div>
       </div>
     </footer>
   `;
+}
+
+/**
+ * Botón flotante de WhatsApp (sección 51/contacto), visible en TODO el
+ * sitio, no solo en la confirmación de pedido (ahí ya existía uno con el
+ * resumen de la compra — ver pedido.js — este es el de "contactar al
+ * negocio" en general). Oculto por completo si no hay número configurado
+ * (CONTACT_WHATSAPP_NUMBER vacío en el .env del servidor) — nunca se
+ * inventa un número, mismo criterio que el resto del sitio.
+ */
+async function renderWhatsappButton() {
+  if (typeof settingsService === 'undefined') return; // por si alguna página no cargó el script
+
+  try {
+    const settings = await settingsService.get();
+    const number = settings.contact_whatsapp_number;
+    if (!number) return;
+
+    const link = document.createElement('a');
+    link.className = 'whatsapp-float-btn';
+    link.href = `https://wa.me/${number}?text=${encodeURIComponent('Hola, tengo una consulta sobre CASTAMOTO.')}`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.setAttribute('aria-label', 'Escribir por WhatsApp');
+    // Ícono en línea (no emoji: se ve distinto/apenas visible según el
+    // sistema operativo, mismo motivo que el ojito de contraseña) — silueta
+    // de auricular en burbuja de chat en blanco, sobre el círculo verde que
+    // ya pone .whatsapp-float-btn en el CSS (currentColor = --blanco acá).
+    link.innerHTML = `
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
+        <path d="M12 2C6.48 2 2 6.19 2 11.35c0 1.95.65 3.76 1.76 5.29L2.6 20.9a.6.6 0 0 0 .74.74l4.53-1.14a10.5 10.5 0 0 0 4.13.86c5.52 0 10-4.19 10-9.35C22 6.19 17.52 2 12 2zm4.86 13.02c-.2.57-1.17 1.11-1.62 1.15-.42.04-.81.2-2.74-.57-2.32-.93-3.82-3.19-3.94-3.34-.11-.15-.94-1.24-.94-2.37s.6-1.68.82-1.91c.21-.23.46-.29.62-.29h.44c.14 0 .33 0 .5.38.2.44.65 1.53.71 1.64.06.11.1.24.02.4-.08.15-.12.24-.24.37-.12.14-.25.31-.36.42-.12.11-.24.24-.1.47.14.23.63 1.02 1.35 1.65.93.81 1.71 1.06 1.94 1.18.23.11.37.09.5-.05.14-.15.6-.68.76-.91.16-.23.31-.19.53-.11.21.08 1.35.62 1.58.73.23.11.38.16.44.26.06.1.06.57-.14 1.14z"/>
+      </svg>
+    `;
+    document.body.appendChild(link);
+  } catch (error) {
+    // Sin número disponible o falló la carga: el sitio sigue funcionando
+    // normal, simplemente no aparece el botón.
+  }
+}
+
+/**
+ * Bot de preguntas (Fase 11, sección "info de la página"): widget flotante
+ * en todo el sitio, arriba del botón de WhatsApp para no superponerse.
+ * Funciona sin sesión (igual que el carrito) — si el proveedor de IA
+ * todavía no está configurado en el servidor, el backend responde con un
+ * mensaje claro (ver AiProviderFactory) que se muestra tal cual en el chat,
+ * nunca un error crudo ni una respuesta inventada.
+ */
+function assistantMessageMarkup(role, text) {
+  const cls = role === 'user' ? 'assistant-msg--user' : 'assistant-msg--bot';
+  return `<div class="assistant-msg ${cls}">${helpers.escapeHtml(text)}</div>`;
+}
+
+function renderAssistantWidget() {
+  const toggle = document.createElement('button');
+  toggle.className = 'assistant-toggle-btn';
+  toggle.type = 'button';
+  toggle.setAttribute('aria-label', 'Preguntas sobre CASTAMOTO');
+  toggle.innerHTML = `
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+    </svg>
+  `;
+
+  const panel = document.createElement('div');
+  panel.className = 'assistant-panel';
+  panel.hidden = true;
+  panel.innerHTML = `
+    <div class="assistant-panel__header">
+      <span>💬 Asistente CASTAMOTO</span>
+      <button type="button" id="assistant-close-btn" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="assistant-panel__messages" id="assistant-messages">
+      ${assistantMessageMarkup('assistant', '¡Hola! Preguntame sobre productos, servicios, envíos o cómo comprar en CASTAMOTO.')}
+    </div>
+    <form class="assistant-panel__form" id="assistant-form">
+      <label class="sr-only" for="assistant-input">Tu pregunta</label>
+      <input class="form-control" type="text" id="assistant-input" placeholder="Escribí tu pregunta…" autocomplete="off" maxlength="1000">
+      <button type="submit" aria-label="Enviar">➤</button>
+    </form>
+  `;
+
+  document.body.appendChild(toggle);
+  document.body.appendChild(panel);
+
+  const messagesBox = panel.querySelector('#assistant-messages');
+  let conversationId = null;
+  try {
+    const saved = sessionStorage.getItem('castamoto_ai_conversation_id');
+    conversationId = saved ? Number(saved) : null;
+  } catch (error) {
+    // sessionStorage puede fallar en navegación privada estricta: simplemente no persiste entre páginas.
+  }
+
+  toggle.addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) document.getElementById('assistant-input').focus();
+  });
+  panel.querySelector('#assistant-close-btn').addEventListener('click', () => { panel.hidden = true; });
+
+  panel.querySelector('#assistant-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const input = document.getElementById('assistant-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    messagesBox.insertAdjacentHTML('beforeend', assistantMessageMarkup('user', message));
+    input.value = '';
+    input.disabled = true;
+
+    const typingEl = document.createElement('div');
+    typingEl.className = 'assistant-msg assistant-msg--bot assistant-msg--typing';
+    typingEl.textContent = 'Escribiendo…';
+    messagesBox.appendChild(typingEl);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+
+    try {
+      const result = await apiService.post('/assistant/ask', { message, conversation_id: conversationId });
+      conversationId = result.conversation_id;
+      try { sessionStorage.setItem('castamoto_ai_conversation_id', String(conversationId)); } catch (error) { /* ver comentario arriba */ }
+      typingEl.remove();
+      messagesBox.insertAdjacentHTML('beforeend', assistantMessageMarkup('assistant', result.reply));
+    } catch (error) {
+      typingEl.remove();
+      messagesBox.insertAdjacentHTML('beforeend', assistantMessageMarkup('assistant', helpers.flattenErrors(error.fields) || error.message));
+    } finally {
+      input.disabled = false;
+      input.focus();
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+  });
 }
 
 async function initLayout() {
@@ -286,6 +484,8 @@ async function initLayout() {
   renderHeaderShell();
   initAuthModalEvents();
   renderFooter();
+  renderWhatsappButton();
+  renderAssistantWidget();
 }
 
 document.addEventListener('DOMContentLoaded', initLayout);

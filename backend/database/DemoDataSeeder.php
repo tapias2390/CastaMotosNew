@@ -193,13 +193,18 @@ final class DemoDataSeeder
             mkdir($directory, 0775, true);
         }
 
+        // Fondo BLANCO a propósito (no el gris oscuro del tema): es un archivo
+        // estático, no puede reaccionar al toggle claro/oscuro del sitio, así
+        // que se genera como si fuera una foto de estudio real (fondo neutro
+        // que se ve bien en los dos temas) — un fondo oscuro quedaba invisible/
+        // mal en modo claro (".card" ya es blanca ahí, ver main.css).
         $filename = bin2hex(random_bytes(16)) . '.svg';
         $svg = <<<SVG
         <svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
-          <rect width="600" height="600" rx="24" fill="#1e1e1e"/>
+          <rect width="600" height="600" rx="24" fill="#ffffff"/>
           <rect x="8" y="8" width="584" height="584" rx="20" fill="none" stroke="#f4c430" stroke-width="4"/>
           <text x="300" y="290" font-size="180" text-anchor="middle" dominant-baseline="central">{$emoji}</text>
-          <text x="300" y="540" font-size="28" fill="#f4c430" font-family="Arial, sans-serif" font-weight="bold" text-anchor="middle">{$label}</text>
+          <text x="300" y="540" font-size="28" fill="#0d0d0d" font-family="Arial, sans-serif" font-weight="bold" text-anchor="middle">{$label}</text>
         </svg>
         SVG;
 

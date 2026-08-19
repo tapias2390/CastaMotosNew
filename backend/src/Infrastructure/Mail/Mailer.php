@@ -34,7 +34,13 @@ final class Mailer
         try {
             if ($host === '') {
                 self::writeToLogDriver($to, $subject, $html);
+            } elseif ((string) Config::get('app.mail.username') !== '') {
+                self::sendViaSmtp($to, $subject, $html);
             } else {
+                // Sin usuario/clave configurados: se asume que el propio hosting
+                // relay-ea mail() sin autenticación (ej. sendmail local de cPanel).
+                // Un proveedor real como Gmail necesita SMTP autenticado — ver
+                // sendViaSmtp() arriba, activado en cuanto MAIL_USERNAME no esté vacío.
                 self::sendViaNativeMail($to, $subject, $html);
             }
         } catch (\Throwable $e) {
@@ -66,6 +72,21 @@ final class Mailer
             preg_replace('/[^a-z0-9]+/i', '-', $to)
         );
         file_put_contents($dir . '/' . $filename, "<!-- Para: {$to} | Asunto: {$subject} -->\n" . $html);
+    }
+
+    private static function sendViaSmtp(string $to, string $subject, string $html): void
+    {
+        $fromAddress = (string) Config::get('app.mail.from_address');
+        $fromName = (string) Config::get('app.mail.from_name');
+
+        $smtp = new SmtpMailer(
+            (string) Config::get('app.mail.host'),
+            (int) Config::get('app.mail.port', 587),
+            (string) Config::get('app.mail.username'),
+            (string) Config::get('app.mail.password')
+        );
+
+        $smtp->send($fromAddress, $fromName, $to, $subject, $html);
     }
 
     private static function sendViaNativeMail(string $to, string $subject, string $html): void

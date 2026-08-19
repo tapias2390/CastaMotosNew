@@ -13,6 +13,9 @@ interface OrderRepositoryInterface
      */
     public function findByOrderNumberForUser(string $orderNumber, int $userId): ?array;
 
+    /** "Mis pedidos": historial completo del usuario, más recientes primero (incluye devoluciones/cancelados). */
+    public function listForUser(int $userId): array;
+
     /**
      * Ejecuta la transacción completa del checkout: vuelve a bloquear y
      * verificar el stock real (SELECT ... FOR UPDATE) justo antes de

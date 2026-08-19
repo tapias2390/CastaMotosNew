@@ -50,6 +50,8 @@ return [
     'ai' => [
         'provider' => $_ENV['AI_PROVIDER'] ?? '',
         'api_key' => $_ENV['AI_API_KEY'] ?? '',
+        // Vacío = usa el default de AiProviderFactory según el proveedor.
+        'model' => $_ENV['AI_MODEL'] ?? '',
     ],
 
     'push' => [

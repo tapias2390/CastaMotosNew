@@ -33,7 +33,11 @@ final class RequestPasswordResetUseCase
 
         $this->passwordResets->create($email, hash('sha256', $rawToken), $expiresAt);
 
-        $resetUrl = rtrim((string) Config::get('app.url'), '/') . '/api/auth/reset-password?token=' . $rawToken;
+        // El enlace apunta a la PÁGINA del frontend (recuperar-password), no al
+        // endpoint crudo del API: ese endpoint espera un POST con JSON, no un
+        // clic de navegador (que hace GET) — la página lee el token de la URL
+        // y desde ahí sí llama a POST /api/auth/reset-password.
+        $resetUrl = rtrim((string) Config::get('app.url'), '/') . '/recuperar-password?token=' . $rawToken;
         $content = EmailTemplates::passwordResetEmail($user->name, $resetUrl);
 
         Mailer::send($email, $content['subject'], $content['html'], 'password_reset', $user->id);

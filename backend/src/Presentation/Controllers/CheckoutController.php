@@ -69,6 +69,15 @@ final class CheckoutController
         Response::success($order, 'Pedido creado correctamente.', 201);
     }
 
+    /** "Mis pedidos": historial completo (sección 23), incluye devueltos/cancelados. */
+    public function index(Request $request): void
+    {
+        /** @var User $user */
+        $user = $request->attribute('auth_user');
+
+        Response::success($this->orders->listForUser($user->id));
+    }
+
     public function show(Request $request, string $orderNumber): void
     {
         /** @var User $user */

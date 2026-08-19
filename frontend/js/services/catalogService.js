@@ -54,5 +54,9 @@ const catalogService = {
   addFavorite: (type, id) => apiService.post('/favorites', { type, id }),
   removeFavorite: (type, id) => apiService.del(`/favorites/${type}/${id}`),
 
+  // Reseñas (sección 26) — leer es público, publicar requiere sesión + haber comprado.
+  reviews: (type, id) => apiService.get('/reviews' + toQueryString({ type, id })),
+  submitReview: (payload) => apiService.post('/reviews', payload),
+
   toQueryString,
 };

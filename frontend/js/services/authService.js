@@ -48,6 +48,19 @@ const authService = {
     return data;
   },
 
+  /** Sección "recuperar contraseña": el backend responde igual exista o no el correo (evita enumeración de usuarios). */
+  async forgotPassword(email) {
+    await apiService.post('/auth/forgot-password', { email });
+  },
+
+  async resetPassword(token, password, passwordConfirmation) {
+    await apiService.post('/auth/reset-password', {
+      token,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
+  },
+
   persistSession(data) {
     localStorage.setItem('castamoto_token', data.token);
     localStorage.setItem('castamoto_user', JSON.stringify(data.user));
@@ -59,5 +72,33 @@ const authService = {
   logout() {
     localStorage.removeItem('castamoto_token');
     localStorage.removeItem('castamoto_user');
+  },
+
+  // "Mi perfil" — el usuario editando sus propios datos (distinto del panel
+  // admin de clientes, que además puede cambiar el rol de OTROS usuarios).
+  async updateProfile(payload) {
+    const user = await apiService.put('/profile', payload);
+    localStorage.setItem('castamoto_user', JSON.stringify(user));
+    return user;
+  },
+
+  async uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const result = await apiService.post('/profile/avatar', formData, { isFormData: true });
+    const user = this.currentUser();
+    if (user) {
+      user.avatar = result.avatar;
+      localStorage.setItem('castamoto_user', JSON.stringify(user));
+    }
+    return result;
+  },
+
+  changePassword(currentPassword, password, passwordConfirmation) {
+    return apiService.post('/auth/change-password', {
+      current_password: currentPassword,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
   },
 };

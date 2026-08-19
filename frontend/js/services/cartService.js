@@ -17,5 +17,6 @@ const cartService = {
 
   checkout: (payload) => apiService.post('/checkout', payload),
   order: (orderNumber) => apiService.get(`/orders/${encodeURIComponent(orderNumber)}`),
+  myOrders: () => apiService.get('/orders'),
   paymentMethods: () => apiService.get('/payment-methods'),
 };

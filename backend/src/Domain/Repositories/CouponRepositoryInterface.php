@@ -30,4 +30,13 @@ interface CouponRepositoryInterface
 
     /** Se llama dentro de la transacción del checkout, junto con el resto del pedido. */
     public function incrementUsage(int $id): void;
+
+    /**
+     * Un mismo usuario no puede reutilizar un cupón que ya usó en un pedido
+     * anterior (más allá del usage_limit GLOBAL del cupón, que es aparte).
+     * Un pedido CANCELADO/DEVUELTO no cuenta como "usado" — mismo criterio
+     * que restoresStock() en OrderStatusTransitions: si la venta no se
+     * concretó, es como si el cupón nunca se hubiera gastado de verdad.
+     */
+    public function hasBeenUsedByUser(int $userId, int $couponId): bool;
 }

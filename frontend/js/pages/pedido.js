@@ -19,6 +19,26 @@ function orderWhatsappLink(order, whatsappNumber) {
   return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 }
 
+/** Línea de tiempo del pedido (sección 22/23) — incluye devoluciones/cancelaciones tal cual pasaron. */
+function orderHistoryMarkup(history) {
+  if (!history || history.length === 0) return '';
+
+  return `
+    <div class="purchase-box mt-16">
+      <h2 style="font-size:0.95rem;margin:0 0 10px;">Historial del pedido</h2>
+      <div class="order-history">
+        ${history.map((step) => `
+          <div class="order-history__step">
+            <span class="badge ${helpers.orderStatusBadgeClass(step.status)}">${helpers.orderStatusLabel(step.status)}</span>
+            <span class="order-history__date">${helpers.formatDateTime(step.created_at)}</span>
+            ${step.comment ? `<p class="order-history__comment">${helpers.escapeHtml(step.comment)}</p>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
 async function initOrderConfirmationPage() {
   const orderNumber = helpers.routeParam('number', 'pedido');
   const mount = document.getElementById('order-mount');
@@ -42,8 +62,10 @@ async function initOrderConfirmationPage() {
         <div style="font-size:3rem;">✅</div>
         <p>¡Gracias por tu compra!</p>
         <div class="order-number">${helpers.escapeHtml(order.order_number)}</div>
-        <span class="badge badge-disponible">${helpers.orderStatusLabel(order.status)}</span>
+        <span class="badge ${helpers.orderStatusBadgeClass(order.status)}">${helpers.orderStatusLabel(order.status)}</span>
       </div>
+
+      ${orderHistoryMarkup(order.status_history)}
 
       <div class="summary-box mt-16">
         ${order.items.map((item) => `

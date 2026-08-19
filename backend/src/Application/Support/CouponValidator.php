@@ -16,12 +16,27 @@ use App\Exceptions\ValidationException;
  */
 final class CouponValidator
 {
-    /** @throws ValidationException si el cupón no se puede usar ahora mismo. */
-    public static function assertUsable(array $coupon, float $cartSubtotal): void
+    /**
+     * @param bool $alreadyUsedByUser Ya calculado por el caller (ver
+     *   CouponRepositoryInterface::hasBeenUsedByUser) — esta función se
+     *   mantiene pura (sin tocar la BD), así que solo decide qué hacer con
+     *   el resultado, no cómo obtenerlo.
+     * @throws ValidationException si el cupón no se puede usar ahora mismo.
+     */
+    public static function assertUsable(array $coupon, float $cartSubtotal, bool $alreadyUsedByUser = false): void
     {
         if ($coupon['status'] !== 'active') {
             throw new ValidationException('No fue posible aplicar el cupón.', [
                 'code' => ['Este cupón ya no está disponible.'],
+            ]);
+        }
+
+        // Un cupón es de un solo uso POR USUARIO, aparte de su usage_limit
+        // global (chequeado más abajo) — evita que la misma persona lo
+        // aplique en varios pedidos.
+        if ($alreadyUsedByUser) {
+            throw new ValidationException('No fue posible aplicar el cupón.', [
+                'code' => ['Ya usaste este cupón en un pedido anterior.'],
             ]);
         }
 

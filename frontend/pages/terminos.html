@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Términos y condiciones — CASTAMOTO</title>
+<script>
+(function () {
+  var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  document.write('<base href="' + (isLocal ? '/proyectos/castamotos/' : '/') + '">');
+})();
+</script>
+<link rel="stylesheet" href="frontend/css/main.css">
+<script src="frontend/js/theme-init.js"></script>
+</head>
+<body>
+
+<div id="app-header"></div>
+
+<main class="container">
+  <h1 class="section__title mt-16">Términos y condiciones</h1>
+  <div id="terms-mount" class="purchase-box" style="max-width:760px;white-space:pre-line;line-height:1.7;">
+    <p class="loading-state">Cargando…</p>
+  </div>
+</main>
+
+<div id="app-footer"></div>
+
+<script src="frontend/js/utils/helpers.js"></script>
+<script src="frontend/js/services/apiService.js"></script>
+<script src="frontend/js/services/authService.js"></script>
+<script src="frontend/js/services/catalogService.js"></script>
+<script src="frontend/js/services/cartService.js"></script>
+<script src="frontend/js/services/themeService.js"></script>
+<script src="frontend/js/services/settingsService.js"></script>
+<script src="frontend/js/components/layout.js"></script>
+<script src="frontend/js/pages/terminos.js"></script>
+</body>
+</html>

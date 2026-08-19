@@ -53,6 +53,19 @@ final class PdoOrderRepository implements OrderRepositoryInterface
         return $order;
     }
 
+    public function listForUser(int $userId): array
+    {
+        $stmt = $this->connection->prepare(
+            'SELECT id, order_number, status, total, delivery_method, created_at
+             FROM orders
+             WHERE user_id = :user_id AND deleted_at IS NULL
+             ORDER BY created_at DESC'
+        );
+        $stmt->execute(['user_id' => $userId]);
+
+        return $stmt->fetchAll();
+    }
+
     public function createFromCheckout(array $order): array
     {
         $this->connection->beginTransaction();

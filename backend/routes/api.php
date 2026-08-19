@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Infrastructure\Http\Router;
 use App\Presentation\Controllers\AddressController;
+use App\Presentation\Controllers\AssistantController;
 use App\Presentation\Controllers\AdminInventoryController;
 use App\Presentation\Controllers\AdminCouponController;
 use App\Presentation\Controllers\AdminCustomerController;
@@ -23,6 +24,7 @@ use App\Presentation\Controllers\PaymentMethodController;
 use App\Presentation\Controllers\ProductController;
 use App\Presentation\Controllers\ProfileController;
 use App\Presentation\Controllers\PushSubscriptionController;
+use App\Presentation\Controllers\ReviewController;
 use App\Presentation\Controllers\SearchController;
 use App\Presentation\Controllers\ServiceController;
 use App\Presentation\Controllers\SettingsController;
@@ -39,6 +41,10 @@ use App\Presentation\Middleware\RequirePermissionMiddleware;
 
 $router->get('api/health', [HealthController::class, 'index']);
 $router->get('api/settings/public', [SettingsController::class, 'publicSettings']);
+$router->get('api/settings/terms', [SettingsController::class, 'terms']);
+
+// --- Asistente de preguntas (Fase 11) — funciona para invitados ---
+$router->post('api/assistant/ask', [AssistantController::class, 'ask'], [new OptionalAuthMiddleware()]);
 $router->post('api/notifications/subscribe', [PushSubscriptionController::class, 'subscribe'], [new AuthMiddleware()]);
 $router->delete('api/notifications/subscribe', [PushSubscriptionController::class, 'unsubscribe'], [new AuthMiddleware()]);
 
@@ -110,6 +116,10 @@ $router->post('api/favorites', [FavoriteController::class, 'store'], [new AuthMi
 $router->get('api/favorites/check', [FavoriteController::class, 'check'], [new AuthMiddleware()]);
 $router->delete('api/favorites/{type}/{id}', [FavoriteController::class, 'destroy'], [new AuthMiddleware()]);
 
+// --- Reseñas (sección 26): lectura pública, publicar requiere sesión + haber comprado ---
+$router->get('api/reviews', [ReviewController::class, 'index']);
+$router->post('api/reviews', [ReviewController::class, 'store'], [new AuthMiddleware()]);
+
 // --- Carrito (Fase 5 / sección 18) — funciona para invitados vía X-Cart-Token ---
 $router->get('api/cart', [CartController::class, 'show'], [new OptionalAuthMiddleware()]);
 $router->post('api/cart/items', [CartController::class, 'addItem'], [new OptionalAuthMiddleware()]);
@@ -126,6 +136,7 @@ $router->put('api/admin/payment-methods/{id}', [AdminPaymentMethodController::cl
 
 // --- Checkout y pedidos (Fase 5 / sección 19) ---
 $router->post('api/checkout', [CheckoutController::class, 'store'], [new AuthMiddleware()]);
+$router->get('api/orders', [CheckoutController::class, 'index'], [new AuthMiddleware()]);
 $router->get('api/orders/{orderNumber}', [CheckoutController::class, 'show'], [new AuthMiddleware()]);
 
 // --- Administración de pedidos e inventario (Fase 6 / secciones 22, 25) ---

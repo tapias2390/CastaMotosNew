@@ -127,6 +127,12 @@ final class Validator
                     $this->addError($field, "Debe ser mayor o igual a {$parameter}.");
                 }
                 break;
+
+            case 'lte':
+                if (!$isEmpty && is_numeric($value) && (float) $value > (float) $parameter) {
+                    $this->addError($field, "Debe ser menor o igual a {$parameter}.");
+                }
+                break;
         }
     }
 

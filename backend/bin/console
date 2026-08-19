@@ -9,6 +9,8 @@ declare(strict_types=1);
  *   php bin/console migrate:rollback   Revierte el último batch de migraciones.
  *   php bin/console db:seed            Ejecuta los seeders (datos iniciales).
  *   php bin/console demo:seed          Carga productos/servicios de MUESTRA para visualizar el frontend.
+ *   php bin/console images:fix-placeholders  Corrige el fondo oscuro de las imágenes
+ *                                             de marcador de posición YA generadas (ver DemoDataSeeder.php).
  */
 
 require dirname(__DIR__) . '/vendor/autoload.php';
@@ -89,6 +91,31 @@ try {
             console_line('Datos de muestra cargados (productos y servicios con imágenes de marcador de posición).');
             break;
 
+        case 'images:fix-placeholders':
+            // Corrección puntual (2026-08): DemoDataSeeder generaba estas SVG con
+            // fondo #1e1e1e (oscuro), quemado en el archivo — se veía mal en modo
+            // claro (.card ya es blanca ahí, ver main.css). El seeder ya se
+            // corrigió para lo nuevo; esto arregla lo YA generado, en el sitio real
+            // (sin Terminal/SSH: se corre una vez vía Cron Job, ver docs de deploy).
+            $fixed = 0;
+            foreach (['products', 'services'] as $subdirectory) {
+                $directory = $basePath . '/storage/uploads/' . $subdirectory;
+                foreach (glob($directory . '/*.svg') ?: [] as $file) {
+                    $content = file_get_contents($file);
+                    if ($content === false || !str_contains($content, 'fill="#1e1e1e"')) {
+                        continue;
+                    }
+
+                    $content = str_replace('fill="#1e1e1e"', 'fill="#ffffff"', $content);
+                    $content = str_replace('fill="#f4c430" font-family=', 'fill="#0d0d0d" font-family=', $content);
+                    file_put_contents($file, $content);
+                    $fixed++;
+                }
+            }
+
+            console_line("Imágenes de marcador de posición corregidas: {$fixed}.");
+            break;
+
         default:
             console_error('Comando no reconocido: ' . ($command ?? '(ninguno)'));
             console_line('');
@@ -97,6 +124,7 @@ try {
             console_line('  migrate:rollback    Revierte el último batch de migraciones.');
             console_line('  db:seed             Ejecuta los seeders (datos iniciales).');
             console_line('  demo:seed           Carga productos/servicios de muestra para visualizar el frontend.');
+            console_line('  images:fix-placeholders  Corrige el fondo oscuro de imágenes de marcador ya generadas.');
             exit(1);
     }
 } catch (Throwable $e) {

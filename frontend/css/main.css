@@ -82,6 +82,11 @@ body {
 
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
+/* El reset de arriba (display:block, regla de autor) le gana al display:none
+   del atributo [hidden] del navegador (UA vs autor: gana autor aunque tenga
+   menos especificidad) — sin esto, cualquier <img hidden> del sitio se
+   seguiría viendo. Ver perfil.html/perfil.js. */
+img[hidden] { display: none; }
 button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; }
 
@@ -214,6 +219,7 @@ input, select, textarea { font-family: inherit; }
 .btn-whatsapp { background: var(--exito); color: var(--blanco); }
 .btn-whatsapp:hover { filter: brightness(1.1); }
 .btn-danger { background: transparent; color: var(--error); border-color: var(--error); }
+.gps-fill-btn { width: 100%; margin: 4px 0 14px; font-size: 0.82rem; }
 .btn-danger:hover { background: var(--error-fondo); }
 .btn-block { width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
@@ -254,15 +260,72 @@ input, select, textarea { font-family: inherit; }
 .filter-check-list input { width: auto; margin: 0; accent-color: var(--amarillo); }
 
 /* --- Nav de categorías --- */
+/* Barra amarilla con dropdown "Categorías" + accesos curados, en vez de la
+   lista plana de antes — mismo contraste fijo negro-sobre-amarillo que
+   .btn-primary (ver --negro arriba: no cambia con el tema claro/oscuro). */
 .category-nav {
-  background: var(--negro-suave);
-  border-bottom: 1px solid var(--gris-borde);
-  overflow-x: auto;
+  background: var(--amarillo);
+}
+.category-nav__bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
+  /* Sin overflow-x/white-space acá a propósito: un ancestro con overflow
+     recortaría el menú desplegable (position: absolute) del dropdown de
+     categorías — con pocos accesos curados alcanza con que envuelvan
+     (flex-wrap) en pantallas angostas, no hace falta scroll horizontal. */
+}
+.category-nav a { color: var(--negro); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.2px; }
+.category-nav a:hover { text-decoration: underline; }
+
+.category-nav__dropdown { position: relative; }
+.category-nav__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--negro);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 2px 0;
   white-space: nowrap;
 }
-.category-nav .container { display: flex; gap: 24px; padding-top: 11px; padding-bottom: 11px; }
-.category-nav a { color: var(--gris-texto); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.2px; transition: color 0.15s ease; }
-.category-nav a:hover { color: var(--amarillo); }
+.category-nav__caret { font-size: 0.7rem; transition: transform 0.15s ease; }
+.category-nav__toggle[aria-expanded="true"] .category-nav__caret { transform: rotate(180deg); }
+/* Panel chico y horizontal (chips en fila que envuelven) en vez de una
+   lista vertical larga — todas las categorías al mismo nivel, sin anidar
+   padre/hijas, para que quepa en pocas líneas. */
+.category-nav__menu {
+  display: none;
+  position: absolute;
+  z-index: 150;
+  top: calc(100% + 10px);
+  left: 0;
+  width: max-content;
+  max-width: min(520px, 90vw);
+  background: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  padding: 10px;
+  white-space: normal;
+}
+.category-nav__menu.is-open { display: flex; flex-wrap: wrap; gap: 8px; }
+.category-nav__menu a {
+  color: var(--blanco);
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--negro-suave);
+  border: 1px solid var(--gris-borde);
+  white-space: nowrap;
+}
+.category-nav__menu a:hover { border-color: var(--amarillo); color: var(--amarillo); text-decoration: none; }
 
 /* --- Secciones / Home --- */
 .section { padding: 36px 0; }
@@ -386,6 +449,32 @@ input, select, textarea { font-family: inherit; }
    marketplace (ícono + nombre) que a una tarjeta de producto genérica. */
 .category-chip { padding: 20px 12px !important; }
 .category-chip .card__icon { font-size: 2rem; margin-bottom: 6px; }
+
+/* Carrusel animado de categorías (Home): desplazamiento automático continuo
+   en vez de una grilla estática — el track trae el contenido duplicado
+   (ver home.js) y la animación lo corre de 0% a -50%, que es un loop
+   perfecto sin salto porque a mitad de camino se ve idéntico al arranque. */
+.category-carousel { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+.category-carousel__track {
+  display: flex;
+  gap: 14px;
+  width: max-content;
+  animation: category-carousel-scroll 32s linear infinite;
+}
+.category-carousel__track .category-chip { flex: 0 0 150px; }
+.category-carousel:hover .category-carousel__track,
+.category-carousel:focus-within .category-carousel__track {
+  animation-play-state: paused;
+}
+@keyframes category-carousel-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+/* Quien prefiere menos movimiento (ajuste del sistema operativo) ve la fila
+   quieta — el usuario igual puede scrollear horizontal con el mouse/dedo. */
+@media (prefers-reduced-motion: reduce) {
+  .category-carousel__track { animation: none; overflow-x: auto; }
+}
 
 /* --- Grids --- */
 .grid {
@@ -512,6 +601,31 @@ input, select, textarea { font-family: inherit; }
 .form-error { color: var(--error); font-size: 0.78rem; margin-top: 4px; }
 .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .form-row .form-group { flex: 1; min-width: 160px; }
+
+/* --- Campo de contraseña con botón "ojito" (mostrar/ocultar) --- */
+.password-field { position: relative; }
+.password-field .form-control { padding-right: 40px; }
+.password-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+  padding: 6px;
+  color: var(--gris-texto);
+  border-radius: var(--radio-sm);
+}
+.password-toggle:hover { color: var(--amarillo); }
+.password-toggle svg { display: block; }
+
+.auth-link { display: block; text-align: right; font-size: 0.78rem; color: var(--gris-texto); margin: -6px 0 14px; }
+.auth-link:hover { color: var(--amarillo); }
 
 /* --- Modal --- */
 .modal-overlay {
@@ -691,6 +805,43 @@ input, select, textarea { font-family: inherit; }
 .seller-box__name { font-weight: 700; color: var(--blanco); font-size: 0.9rem; }
 .seller-box__meta { font-size: 0.75rem; color: var(--gris-texto); }
 
+.stock-hint { font-weight: 400; color: var(--gris-texto); font-size: 0.78rem; }
+
+.payment-methods-box {
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio);
+  padding: 14px 16px;
+  font-size: 0.85rem;
+}
+.payment-methods-box strong { color: var(--blanco); }
+.payment-methods-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.payment-methods-list li {
+  background: var(--negro-suave);
+  border: 1px solid var(--gris-borde);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  color: var(--gris-texto);
+}
+
+/* "Lo que tienes que saber de este producto" */
+.specs-title { font-size: 1rem; font-weight: 800; color: var(--blanco); margin: 0 0 10px; }
+.specs-summary { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.specs-summary li { font-size: 0.85rem; color: var(--gris-texto); }
+.specs-summary strong { color: var(--blanco); }
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--amarillo);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 0;
+  text-decoration: underline;
+}
+.specs-table { width: 100%; font-size: 0.85rem; color: var(--gris-texto); margin-top: 8px; border-collapse: collapse; }
+.specs-table td { padding: 6px 0; border-bottom: 1px solid var(--gris-borde); }
+.specs-table td:first-child { font-weight: 600; color: var(--blanco); width: 40%; }
+
 /* Carrusel horizontal (relacionados) */
 .carousel { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
 .carousel .card { flex: 0 0 200px; scroll-snap-align: start; }
@@ -718,6 +869,154 @@ input, select, textarea { font-family: inherit; }
 }
 .rating-summary { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--gris-texto); margin: 4px 0 12px; }
 .rating-summary .stars { color: var(--amarillo); letter-spacing: 2px; font-size: 1rem; }
+.stars { color: var(--amarillo); letter-spacing: 1px; }
+
+/* Opiniones del producto (sección 26) */
+.review-item { border-bottom: 1px solid var(--gris-borde); padding: 14px 0; }
+.review-item:first-child { padding-top: 0; }
+.review-item__header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.85rem; }
+.review-item__header strong { color: var(--blanco); }
+.review-item__date { color: var(--gris-texto-tenue); font-size: 0.75rem; margin-left: auto; }
+.review-item__comment { margin: 6px 0 0; color: var(--gris-texto); font-size: 0.88rem; white-space: pre-line; }
+
+/* Mi perfil */
+.profile-avatar-row { display: flex; align-items: center; gap: 16px; }
+.profile-avatar { width: 72px; height: 72px; border-radius: 999px; object-fit: cover; border: 1px solid var(--gris-borde); flex-shrink: 0; }
+.profile-avatar--placeholder { display: flex; align-items: center; justify-content: center; background: var(--negro-suave); font-size: 1.8rem; }
+
+/* Botón flotante de WhatsApp (todo el sitio) */
+.whatsapp-float-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--exito);
+  color: var(--blanco);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  z-index: 180;
+  transition: transform 0.15s ease;
+  animation: whatsapp-pulse-scale 2.4s ease-in-out infinite;
+}
+/* Se pausa el pulso al pasar el mouse, para que el :hover (agrandar un
+   poco más, fijo) se vea limpio en vez de compitiendo con la animación. */
+.whatsapp-float-btn:hover { animation-play-state: paused; transform: scale(1.08); }
+/* Anillo que se expande y se desvanece detrás del botón — el "toque" que
+   llama la atención sin mover el ícono en sí (eso lo hace whatsapp-pulse-scale). */
+.whatsapp-float-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--exito);
+  z-index: -1;
+  animation: whatsapp-pulse-ring 2.4s ease-out infinite;
+}
+@keyframes whatsapp-pulse-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes whatsapp-pulse-ring {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .whatsapp-float-btn, .whatsapp-float-btn::before { animation: none; }
+}
+
+/* Bot de preguntas (Fase 11): botón flotante arriba del de WhatsApp (mismo
+   right, bottom mayor) para que no se superpongan, color de marca (amarillo)
+   para distinguirse del verde de WhatsApp de un vistazo. */
+.assistant-toggle-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 88px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--amarillo);
+  color: var(--negro);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  z-index: 180;
+  transition: transform 0.15s ease;
+}
+.assistant-toggle-btn:hover { transform: scale(1.08); }
+
+.assistant-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 152px;
+  width: min(340px, calc(100vw - 40px));
+  height: min(440px, calc(100vh - 200px));
+  background: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 190;
+}
+.assistant-panel__header {
+  background: var(--negro);
+  color: var(--amarillo);
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.assistant-panel__header button { background: none; border: none; color: var(--gris-texto); font-size: 1.1rem; }
+.assistant-panel__messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.assistant-msg { max-width: 85%; padding: 8px 12px; border-radius: var(--radio); font-size: 0.85rem; line-height: 1.4; white-space: pre-line; }
+.assistant-msg--bot { align-self: flex-start; background: var(--negro-suave); color: var(--blanco); }
+.assistant-msg--user { align-self: flex-end; background: var(--amarillo); color: var(--negro); }
+.assistant-msg--typing { color: var(--gris-texto-tenue); font-style: italic; }
+.assistant-panel__form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--gris-borde); }
+.assistant-panel__form input { flex: 1; }
+.assistant-panel__form button {
+  background: var(--amarillo);
+  color: var(--negro);
+  border: none;
+  border-radius: var(--radio-sm);
+  padding: 0 14px;
+  font-weight: 700;
+}
+@media (max-width: 480px) {
+  .assistant-panel { right: 12px; bottom: 140px; }
+  .assistant-toggle-btn, .whatsapp-float-btn { right: 12px; }
+}
+
+/* Historial de estados del pedido */
+.order-history { display: flex; flex-direction: column; gap: 10px; }
+.order-history__step { border-left: 2px solid var(--gris-borde); padding-left: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.order-history__date { color: var(--gris-texto-tenue); font-size: 0.78rem; }
+.order-history__comment { flex-basis: 100%; margin: 2px 0 0; color: var(--gris-texto); font-size: 0.82rem; }
+
+/* Lista "Mis pedidos" */
+.order-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.order-list-item__meta { font-size: 0.8rem; color: var(--gris-texto); }
+.order-list-item__number { font-weight: 700; color: var(--blanco); }
 .detail-gallery__main img { width: 100%; height: 100%; object-fit: cover; }
 .detail-gallery__thumbs { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .detail-gallery__thumbs img {
@@ -812,8 +1111,14 @@ input, select, textarea { font-family: inherit; }
   cursor: pointer;
 }
 
-.share-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-.share-btn {
+/* Botón único "compartir" (solo ícono) + menú desplegable con las opciones
+   (WhatsApp/Facebook/X/Telegram/copiar enlace) — en vez de una fila fija de
+   6 botones con texto ocupando todo el ancho. */
+.product-share { position: relative; display: inline-block; margin-top: 12px; }
+.product-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--gris-borde);
   background: var(--negro-suave);
   color: var(--blanco);
@@ -821,7 +1126,35 @@ input, select, textarea { font-family: inherit; }
   padding: 8px 12px;
   font-size: 0.8rem;
 }
-.share-btn:hover { border-color: var(--amarillo); color: var(--amarillo); }
+.product-share-btn:hover { border-color: var(--amarillo); color: var(--amarillo); }
+.share-dropdown {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  background: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-sm);
+  box-shadow: var(--sombra);
+  padding: 6px;
+  flex-direction: column;
+  gap: 2px;
+}
+.share-dropdown.is-open { display: flex; }
+.share-dropdown a, .share-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--blanco);
+  padding: 8px 10px;
+  border-radius: var(--radio-sm);
+  font-size: 0.85rem;
+}
+.share-dropdown a:hover, .share-dropdown button:hover { background: var(--negro-suave); color: var(--amarillo); }
 
 .cart-line {
   display: flex;

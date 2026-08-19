@@ -83,7 +83,8 @@ final class CheckoutUseCase
                 if ($coupon !== null) {
                     $subtotalPreview = CartPricingCalculator::calculate($items, $deliveryMethod, 0, 0);
                     $subtotalAfterItemDiscounts = $subtotalPreview['subtotal'] - $subtotalPreview['discount_total'];
-                    CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts);
+                    $alreadyUsed = $this->coupons->hasBeenUsedByUser($userId, (int) $coupon['id']);
+                    CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts, $alreadyUsed);
                 }
             }
         }
@@ -140,7 +141,11 @@ final class CheckoutUseCase
         if ($customerEmail !== '') {
             try {
                 $orderUrl = rtrim((string) Config::get('app.url'), '/') . '/pedido/' . $orderNumber;
-                $content = EmailTemplates::orderCreatedEmail($customerName, $orderNumber, (float) $pricing['total'], $orderUrl);
+                $emailOrder = array_merge($orderPayload, [
+                    'payment_method_name' => $paymentMethod['name'],
+                    'address' => $this->addresses->find($addressId),
+                ]);
+                $content = EmailTemplates::orderCreatedEmail($customerName, $emailOrder, $orderUrl);
                 Mailer::send($customerEmail, $content['subject'], $content['html'], 'order_created', $userId);
             } catch (\Throwable $e) {
                 Logger::error('Fallo al enviar correo de pedido creado', ['order_number' => $orderNumber, 'error' => $e->getMessage()]);

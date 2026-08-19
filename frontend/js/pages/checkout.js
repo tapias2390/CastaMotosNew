@@ -75,6 +75,73 @@ async function loadAddresses() {
   });
 }
 
+/**
+ * "Usar mi ubicación" (sección 19: agregar dirección) — pide el GPS del
+ * navegador y convierte lat/lon a País/Departamento/Ciudad con geocodificación
+ * inversa real (Nominatim/OpenStreetMap, gratis, sin API key: política de uso
+ * en https://operations.osmfoundation.org/policies/nominatim/, 1 request a
+ * la vez, que es justo el caso de uso acá — un clic manual, no scraping).
+ * Solo RELLENA los campos, nunca los envía solo ni oculta el formulario: el
+ * usuario siempre puede corregir a mano antes de guardar (el GPS del celular
+ * puede errar de barrio, o el usuario puede estar comprando para otra ciudad).
+ */
+function wireGpsAddressFill() {
+  const button = document.getElementById('gps-fill-btn');
+  const errorBox = document.getElementById('gps-fill-error');
+  if (!button) return;
+
+  button.addEventListener('click', () => {
+    errorBox.textContent = '';
+
+    if (!('geolocation' in navigator)) {
+      errorBox.textContent = 'Tu navegador no soporta geolocalización.';
+      return;
+    }
+
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Obteniendo ubicación…';
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1&accept-language=es`
+          );
+          if (!response.ok) throw new Error('El servicio de ubicación no respondió.');
+
+          const data = await response.json();
+          const addr = data.address || {};
+
+          if (addr.country) document.getElementById('addr-country').value = addr.country;
+          document.getElementById('addr-state').value = addr.state || addr.region || '';
+          document.getElementById('addr-city').value = addr.city || addr.town || addr.municipality || addr.village || '';
+
+          if (!addr.city && !addr.town && !addr.municipality && !addr.village) {
+            helpers.toast('Ubicación obtenida, pero no se pudo identificar la ciudad exacta — revisa/completa el campo.', 'info');
+          } else {
+            helpers.toast('País/Departamento/Ciudad completados con tu ubicación.', 'success');
+          }
+        } catch (error) {
+          errorBox.textContent = 'No fue posible convertir tu ubicación en dirección. Completa los campos manualmente.';
+        } finally {
+          button.disabled = false;
+          button.textContent = originalLabel;
+        }
+      },
+      (geoError) => {
+        button.disabled = false;
+        button.textContent = originalLabel;
+        errorBox.textContent = geoError.code === geoError.PERMISSION_DENIED
+          ? 'Bloqueaste el permiso de ubicación del navegador — habilítalo o completa los campos manualmente.'
+          : 'No fue posible obtener tu ubicación.';
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+
 function wireNewAddressForm() {
   document.getElementById('new-address-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -173,6 +240,7 @@ async function initCheckoutPage() {
 
   await loadAddresses();
   await loadPaymentMethods();
+  wireGpsAddressFill();
   wireNewAddressForm();
   wireDeliveryMethod(cart);
   wireConfirmOrder();

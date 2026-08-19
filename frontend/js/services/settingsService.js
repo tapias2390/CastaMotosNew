@@ -16,4 +16,7 @@ const settingsService = {
     }
     return this._cache;
   },
+
+  /** Términos y condiciones (sección 6), guardados en la BD — ver /terminos. */
+  terms: () => apiService.get('/settings/terms'),
 };

@@ -110,7 +110,13 @@ final class CartController
         $pricingWithoutCoupon = CartPricingCalculator::calculate($items, 'domicilio', 0, 0);
         $subtotalAfterItemDiscounts = $pricingWithoutCoupon['subtotal'] - $pricingWithoutCoupon['discount_total'];
 
-        CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts);
+        // Carrito de invitado (sin user_id todavía): no hay forma de saber si
+        // "ya lo usó" hasta que inicie sesión — el checkout (que sí exige
+        // login) es quien re-valida esto de forma autoritativa igual.
+        $alreadyUsed = $cart['user_id'] !== null
+            && $this->coupons->hasBeenUsedByUser((int) $cart['user_id'], (int) $coupon['id']);
+
+        CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts, $alreadyUsed);
 
         $this->carts->setCoupon((int) $cart['id'], (int) $coupon['id']);
         // $cart es un array (por valor): setCoupon() ya actualizó la fila en BD,
@@ -160,7 +166,10 @@ final class CartController
             $subtotalAfterItemDiscounts = $subtotalPreview['subtotal'] - $subtotalPreview['discount_total'];
 
             try {
-                CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts);
+                $alreadyUsed = $cart['user_id'] !== null
+                    && $this->coupons->hasBeenUsedByUser((int) $cart['user_id'], (int) $coupon['id']);
+
+                CouponValidator::assertUsable($coupon, $subtotalAfterItemDiscounts, $alreadyUsed);
             } catch (ValidationException $e) {
                 $this->carts->setCoupon((int) $cart['id'], null);
                 $coupon = null;

@@ -86,6 +86,13 @@ const helpers = {
     return labels[status] || status;
   },
 
+  /** Clase de badge (reutiliza los 3 colores ya definidos en main.css) según qué tan "bien" va el estado. */
+  orderStatusBadgeClass(status) {
+    if (status === 'ENTREGADO') return 'badge-disponible';
+    if (status === 'CANCELADO' || status === 'DEVUELTO') return 'badge-agotado';
+    return 'badge-ultimas_unidades';
+  },
+
   /** Etiqueta de ACCIÓN (verbo, "qué hacer") para avanzar un pedido al estado
    * indicado — la usa el panel admin para mostrar botones tipo "Confirmar
    * pago" en vez de un selector con el nombre crudo del estado. */
@@ -110,6 +117,37 @@ const helpers = {
   /** Aplana el árbol de categorías (padre + hijos) en una sola lista, para <select>/checkboxes. */
   flattenCategories(tree) {
     return tree.reduce((flat, node) => flat.concat([node], helpers.flattenCategories(node.children || [])), []);
+  },
+
+  // Íconos de "ojito" como SVG en línea (trazo = currentColor, hereda el
+  // color del botón en cualquier tema) — no emoji: la fuente de emoji varía
+  // de un sistema a otro y en algunos Windows se ve como un glifo minúsculo
+  // apenas visible, además de no calzar con el resto de la UI.
+  EYE_ICON_OPEN: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  EYE_ICON_OFF: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+
+  /**
+   * Activa el botón "ojito" de mostrar/ocultar contraseña sobre cualquier
+   * `.password-toggle` dentro de `scope` (todo el documento por defecto).
+   * Requiere el markup: <div class="password-field"><input id="x">
+   * <button class="password-toggle" type="button" data-target="x"></button></div>
+   * — el ícono inicial lo pone esta misma función, no hace falta escribirlo
+   * a mano en cada formulario. Se llama después de insertar el HTML del
+   * formulario (innerHTML no conserva listeners, así que esto se
+   * re-ejecuta cada vez que se redibuja).
+   */
+  initPasswordToggles(scope = document) {
+    scope.querySelectorAll('.password-toggle').forEach((btn) => {
+      btn.innerHTML = helpers.EYE_ICON_OPEN;
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        if (!input) return;
+        const showing = input.type === 'password';
+        input.type = showing ? 'text' : 'password';
+        btn.innerHTML = showing ? helpers.EYE_ICON_OFF : helpers.EYE_ICON_OPEN;
+        btn.setAttribute('aria-label', showing ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      });
+    });
   },
 
   /** Ícono por categoría (mismo criterio que los placeholders de DemoDataSeeder). */
