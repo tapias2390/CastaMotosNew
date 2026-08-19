@@ -17,7 +17,7 @@
   document.write('<base href="' + (isLocal ? '/proyectos/castamotos/' : '/') + '">');
 })();
 </script>
-<link rel="stylesheet" href="frontend/css/main.css?v=20260819b">
+<link rel="stylesheet" href="frontend/css/main.css?v=20260819d">
 <link rel="icon" type="image/png" href="frontend/assets/img/logo.png">
 <script src="frontend/js/theme-init.js?v=20260819b"></script>
 </head>
@@ -26,6 +26,11 @@
 <div id="app-header"></div>
 
 <section class="hero">
+  <div class="hero-float hero-float--1" aria-hidden="true">🔧</div>
+  <div class="hero-float hero-float--2" aria-hidden="true">⚙️</div>
+  <div class="hero-float hero-float--3" aria-hidden="true">🪖</div>
+  <div class="hero-float hero-float--4" aria-hidden="true">🏍️</div>
+  <div class="hero-float hero-float--5" aria-hidden="true">⚙️</div>
   <div class="container">
     <h1 data-i18n="home.hero.title">Todo para tu moto, en un solo lugar</h1>
     <p data-i18n="home.hero.subtitle">Repuestos, accesorios, cascos y servicios especializados para tu motocicleta.</p>
