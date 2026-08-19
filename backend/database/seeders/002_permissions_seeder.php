@@ -16,7 +16,7 @@ return new class extends Seeder {
             'manage-products', 'manage-services', 'manage-categories', 'manage-brands',
             'manage-orders', 'manage-payments', 'manage-payment-methods',
             'manage-inventory', 'manage-reviews', 'manage-coupons', 'manage-promotions',
-            'manage-settings', 'manage-notifications', 'manage-ai',
+            'manage-settings', 'manage-notifications', 'manage-ai', 'manage-suppliers',
             'view-own-orders', 'view-own-store',
         ];
 
@@ -33,7 +33,7 @@ return new class extends Seeder {
                 'manage-users', 'manage-stores', 'manage-products', 'manage-services',
                 'manage-categories', 'manage-brands', 'manage-orders', 'manage-payments',
                 'manage-payment-methods', 'manage-inventory', 'manage-reviews',
-                'manage-coupons', 'manage-promotions', 'manage-notifications',
+                'manage-coupons', 'manage-promotions', 'manage-notifications', 'manage-suppliers',
             ],
             'vendedor' => [
                 'manage-products', 'manage-services', 'manage-inventory', 'view-own-store', 'view-own-orders',

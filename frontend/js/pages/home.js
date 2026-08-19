@@ -14,7 +14,7 @@ async function loadHomeCategories() {
     const chips = tree.flatMap((cat) => (cat.children && cat.children.length > 0 ? cat.children : [cat]));
 
     if (chips.length === 0) {
-      mount.innerHTML = '<p class="empty-state">Todavía no hay categorías publicadas.</p>';
+      mount.innerHTML = `<p class="empty-state">${i18nService.t('home.empty.categories')}</p>`;
       return;
     }
 
@@ -28,7 +28,7 @@ async function loadHomeCategories() {
       <a class="card category-chip" href="categoria/${encodeURIComponent(cat.slug)}">
         <div class="card__body text-center">
           <span class="card__icon">${helpers.categoryIcon(cat.slug)}</span>
-          <span class="card__name">${helpers.escapeHtml(cat.name)}</span>
+          <span class="card__name">${helpers.escapeHtml(helpers.localized(cat, 'name'))}</span>
         </div>
       </a>
     `;
@@ -42,7 +42,7 @@ async function loadHomeCategories() {
       </div>
     `;
   } catch (error) {
-    mount.innerHTML = `<p class="error-state">No fue posible cargar las categorías.</p>`;
+    mount.innerHTML = `<p class="error-state">${i18nService.t('home.error.categories')}</p>`;
   }
 }
 
@@ -73,14 +73,14 @@ async function loadFeaturedProducts() {
   try {
     const result = await catalogService.products({ sort: 'newest', per_page: 8 });
     if (result.data.length === 0) {
-      mount.innerHTML = '<p class="empty-state">Todavía no hay productos publicados.</p>';
+      mount.innerHTML = `<p class="empty-state">${i18nService.t('home.empty.products')}</p>`;
       return;
     }
 
     mount.innerHTML = `<div class="grid">${result.data.map(productCardMarkup).join('')}</div>`;
     wireCardEvents(mount);
   } catch (error) {
-    mount.innerHTML = `<p class="error-state">No fue posible cargar los productos.</p>`;
+    mount.innerHTML = `<p class="error-state">${i18nService.t('home.error.products')}</p>`;
   }
 }
 
@@ -91,14 +91,14 @@ async function loadFeaturedServices() {
   try {
     const result = await catalogService.services({ sort: 'newest', per_page: 4 });
     if (result.data.length === 0) {
-      mount.innerHTML = '<p class="empty-state">Todavía no hay servicios publicados.</p>';
+      mount.innerHTML = `<p class="empty-state">${i18nService.t('home.empty.services')}</p>`;
       return;
     }
 
     mount.innerHTML = `<div class="grid">${result.data.map(serviceCardMarkup).join('')}</div>`;
     wireCardEvents(mount);
   } catch (error) {
-    mount.innerHTML = `<p class="error-state">No fue posible cargar los servicios.</p>`;
+    mount.innerHTML = `<p class="error-state">${i18nService.t('home.error.services')}</p>`;
   }
 }
 

@@ -8,18 +8,23 @@ function productCardMarkup(product) {
   const hasDiscount = product.previous_price && Number(product.previous_price) > Number(product.price);
   const discountPercent = Number(product.discount_percentage) || 0;
   const stockStatus = product.stock_status || 'disponible';
-  const stockLabel = { disponible: 'Disponible', ultimas_unidades: 'Últimas unidades', agotado: 'Agotado' }[stockStatus];
+  const stockLabel = {
+    disponible: i18nService.t('card.stock.available'),
+    ultimas_unidades: i18nService.t('card.stock.lastUnits'),
+    agotado: i18nService.t('card.stock.soldOut'),
+  }[stockStatus];
   const stars = helpers.renderStars(product.rating_avg, product.rating_count);
+  const name = helpers.localized(product, 'name');
 
   return `
     <a class="card" href="producto/${encodeURIComponent(product.slug)}" data-card-type="product" data-card-id="${product.id}">
       <div class="card__image">
-        ${image ? `<img src="${image}" alt="${helpers.escapeHtml(product.name)}" loading="lazy">` : 'Sin imagen'}
+        ${image ? `<img src="${image}" alt="${helpers.escapeHtml(name)}" loading="lazy">` : i18nService.t('card.noImage')}
         ${discountPercent > 0 ? `<span class="card__discount-badge">-${Math.round(discountPercent)}%</span>` : ''}
-        <button class="card__favorite ${product.is_favorite ? 'is-active' : ''}" data-favorite-type="product" data-favorite-id="${product.id}" aria-label="Favorito" onclick="event.preventDefault();">♥</button>
+        <button class="card__favorite ${product.is_favorite ? 'is-active' : ''}" data-favorite-type="product" data-favorite-id="${product.id}" aria-label="${i18nService.t('card.favorite')}" onclick="event.preventDefault();">♥</button>
       </div>
       <div class="card__body">
-        <span class="card__name">${helpers.escapeHtml(product.name)}</span>
+        <span class="card__name">${helpers.escapeHtml(name)}</span>
         ${stars ? `<span class="card__rating">${stars}</span>` : ''}
         <div class="card__price-row">
           <span class="card__price">${helpers.formatCurrency(product.price)}</span>
@@ -34,15 +39,16 @@ function productCardMarkup(product) {
 
 function serviceCardMarkup(service) {
   const image = helpers.mediaUrl('services', service.primary_image || service.image);
+  const name = helpers.localized(service, 'name');
 
   return `
     <a class="card" href="servicio/${encodeURIComponent(service.slug)}" data-card-type="service" data-card-id="${service.id}">
       <div class="card__image">
-        ${image ? `<img src="${image}" alt="${helpers.escapeHtml(service.name)}" loading="lazy">` : 'Sin imagen'}
-        <button class="card__favorite ${service.is_favorite ? 'is-active' : ''}" data-favorite-type="service" data-favorite-id="${service.id}" aria-label="Favorito" onclick="event.preventDefault();">♥</button>
+        ${image ? `<img src="${image}" alt="${helpers.escapeHtml(name)}" loading="lazy">` : i18nService.t('card.noImage')}
+        <button class="card__favorite ${service.is_favorite ? 'is-active' : ''}" data-favorite-type="service" data-favorite-id="${service.id}" aria-label="${i18nService.t('card.favorite')}" onclick="event.preventDefault();">♥</button>
       </div>
       <div class="card__body">
-        <span class="card__name">${helpers.escapeHtml(service.name)}</span>
+        <span class="card__name">${helpers.escapeHtml(name)}</span>
         <div class="card__price-row"><span class="card__price">${helpers.formatCurrency(service.price)}</span></div>
         ${service.location ? `<span class="card__meta">📍 ${helpers.escapeHtml(service.location)}</span>` : ''}
       </div>

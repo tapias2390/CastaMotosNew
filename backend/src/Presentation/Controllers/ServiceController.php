@@ -32,6 +32,10 @@ final class ServiceController
 
     private const RULES = [
         'name' => 'required|max:200',
+        // Traducción al inglés (selector de idioma, opcional): vacío = fallback
+        // al texto en español — ver helpers.localized() en el frontend.
+        'name_en' => 'max:200',
+        'description_en' => 'max:5000',
         'category_id' => 'integer',
         'price' => 'required|numeric|gte:0',
         'duration_minutes' => 'integer|gte:0',

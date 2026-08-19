@@ -34,6 +34,21 @@ const helpers = {
     return div.innerHTML;
   },
 
+  /**
+   * Selector de idioma (sección nueva): contenido de negocio (nombre/
+   * descripción de productos, servicios, categorías) tiene su propia columna
+   * *_en, escrita a mano por el admin — a diferencia del texto fijo de la
+   * interfaz (ver i18n.js). Vacío/no escrita todavía = fallback al español,
+   * nunca un hueco en blanco.
+   */
+  localized(item, field) {
+    if (!item) return '';
+    if (typeof i18nService !== 'undefined' && i18nService.current() === 'en') {
+      return item[`${field}_en`] || item[field] || '';
+    }
+    return item[field] || '';
+  },
+
   mediaUrl(type, filename) {
     if (!filename) return null;
     return `api/media/${type}/${filename}`; // relativo: se resuelve contra <base>, ver apiService.js

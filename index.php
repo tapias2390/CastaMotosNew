@@ -27,12 +27,12 @@
 
 <section class="hero">
   <div class="container">
-    <h1>Todo para tu moto, en un solo lugar</h1>
-    <p>Repuestos, accesorios, cascos y servicios especializados para tu motocicleta.</p>
+    <h1 data-i18n="home.hero.title">Todo para tu moto, en un solo lugar</h1>
+    <p data-i18n="home.hero.subtitle">Repuestos, accesorios, cascos y servicios especializados para tu motocicleta.</p>
     <form id="hero-search-form" style="max-width:520px;margin:20px auto 0;display:flex;border-radius:10px;overflow:hidden;border:1px solid var(--gris-borde);">
-      <label class="sr-only" for="hero-search-input">Buscar</label>
-      <input class="form-control" id="hero-search-input" type="search" placeholder="¿Qué estás buscando?" style="border:none;border-radius:0;">
-      <button class="btn btn-primary" type="submit">Buscar</button>
+      <label class="sr-only" for="hero-search-input" data-i18n="search.aria">Buscar</label>
+      <input class="form-control" id="hero-search-input" type="search" placeholder="¿Qué estás buscando?" data-i18n-placeholder="home.hero.searchPlaceholder" style="border:none;border-radius:0;">
+      <button class="btn btn-primary" type="submit" data-i18n="home.hero.searchBtn">Buscar</button>
     </form>
   </div>
 </section>
@@ -48,52 +48,53 @@
         <span class="wash-cta__bubble wash-cta__bubble--4"></span>
       </span>
       <span class="wash-cta__text">
-        <strong>Lavado de Motos y Cascos</strong>
-        <span>Reservá el día y la hora que prefieras.</span>
+        <strong data-i18n="home.wash.title">Lavado de Motos y Cascos</strong>
+        <span data-i18n="home.wash.subtitle">Reservá el día y la hora que prefieras.</span>
       </span>
-      <span class="wash-cta__btn">Reservar <span class="wash-cta__arrow">→</span></span>
+      <span class="wash-cta__btn"><span data-i18n="home.wash.btn">Reservar</span> <span class="wash-cta__arrow">→</span></span>
     </a>
 
     <div class="promo-banner">
       <div class="promo-banner__text">
-        <h2>Todo para tu moto, con envío a todo el país</h2>
-        <p>Repuestos, accesorios y servicios especializados en un solo lugar.</p>
+        <h2 data-i18n="home.promo.title">Todo para tu moto, con envío a todo Manizales</h2>
+        <p data-i18n="home.promo.subtitle">Repuestos, accesorios y servicios especializados en un solo lugar. ¿Eres de otra ciudad? Consultanos por WhatsApp.</p>
       </div>
-      <a class="btn btn-primary" href="productos">Explorar productos</a>
+      <a class="btn btn-primary" href="productos" data-i18n="home.promo.btn">Explorar productos</a>
     </div>
   </div>
 
   <section class="section">
-    <h2 class="section__title">Categorías</h2>
-    <div id="home-categories"><p class="loading-state">Cargando categorías…</p></div>
+    <h2 class="section__title" data-i18n="home.section.categories">Categorías</h2>
+    <div id="home-categories"><p class="loading-state" data-i18n="home.loading.categories">Cargando categorías…</p></div>
   </section>
 
   <section class="section" id="home-deals-section" hidden>
-    <h2 class="section__title">Ofertas</h2>
+    <h2 class="section__title" data-i18n="home.section.deals">Ofertas</h2>
     <div id="home-deals"></div>
   </section>
 
   <section class="section">
-    <h2 class="section__title">Productos destacados</h2>
-    <div id="home-products"><p class="loading-state">Cargando productos…</p></div>
+    <h2 class="section__title" data-i18n="home.section.products">Productos destacados</h2>
+    <div id="home-products"><p class="loading-state" data-i18n="home.loading.products">Cargando productos…</p></div>
   </section>
 
   <section class="section">
-    <h2 class="section__title">Servicios destacados</h2>
-    <div id="home-services"><p class="loading-state">Cargando servicios…</p></div>
+    <h2 class="section__title" data-i18n="home.section.services">Servicios destacados</h2>
+    <div id="home-services"><p class="loading-state" data-i18n="home.loading.services">Cargando servicios…</p></div>
   </section>
 
   <section class="section">
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
-      <div class="card"><div class="card__body text-center"><strong style="color:var(--amarillo);">🔒 Compra segura</strong><p class="card__meta">Datos protegidos en cada pedido.</p></div></div>
-      <div class="card"><div class="card__body text-center"><strong style="color:var(--amarillo);">🚚 Envíos a todo el país</strong><p class="card__meta">Entrega a domicilio o recogida en tienda.</p></div></div>
-      <div class="card"><div class="card__body text-center"><strong style="color:var(--amarillo);">💬 Soporte especializado</strong><p class="card__meta">Servicios realizados por profesionales.</p></div></div>
+      <div class="card"><div class="card__body text-center"><strong style="color:var(--amarillo);" data-i18n="home.trust.secure">🔒 Compra segura</strong><p class="card__meta" data-i18n="home.trust.secureDesc">Datos protegidos en cada pedido.</p></div></div>
+      <div class="card"><div class="card__body text-center"><strong style="color:var(--amarillo);" data-i18n="home.trust.shipping">🚚 Envíos a todo Manizales</strong><p class="card__meta" data-i18n="home.trust.shippingDesc">Entrega a domicilio o recogida en tienda. Otra ciudad: consultanos por WhatsApp.</p></div></div>
+      <div class="card"><div class="card__body text-center"><strong style="color:var(--amarillo);" data-i18n="home.trust.support">💬 Soporte especializado</strong><p class="card__meta" data-i18n="home.trust.supportDesc">Servicios realizados por profesionales.</p></div></div>
     </div>
   </section>
 </main>
 
 <div id="app-footer"></div>
 
+<script src="frontend/js/i18n.js"></script>
 <script src="frontend/js/utils/helpers.js"></script>
 <script src="frontend/js/services/apiService.js"></script>
 <script src="frontend/js/services/authService.js"></script>

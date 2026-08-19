@@ -9,6 +9,7 @@ use App\Application\Support\SlugGenerator;
 use App\Domain\Repositories\BrandRepositoryInterface;
 use App\Domain\Repositories\CategoryRepositoryInterface;
 use App\Domain\Repositories\ProductRepositoryInterface;
+use App\Domain\Repositories\SupplierRepositoryInterface;
 use App\Exceptions\ValidationException;
 
 final class CreateProductUseCase
@@ -16,7 +17,8 @@ final class CreateProductUseCase
     public function __construct(
         private ProductRepositoryInterface $products,
         private CategoryRepositoryInterface $categories,
-        private BrandRepositoryInterface $brands
+        private BrandRepositoryInterface $brands,
+        private SupplierRepositoryInterface $suppliers
     ) {
     }
 
@@ -54,6 +56,10 @@ final class CreateProductUseCase
 
         if (!empty($data['brand_id']) && !$this->brands->exists((int) $data['brand_id'])) {
             $errors['brand_id'] = ['La marca indicada no existe.'];
+        }
+
+        if (!empty($data['supplier_id']) && !$this->suppliers->exists((int) $data['supplier_id'])) {
+            $errors['supplier_id'] = ['El proveedor indicado no existe.'];
         }
 
         // Si no se escribió SKU, se genera uno automático más abajo (garantizado

@@ -45,6 +45,7 @@ const ADMIN_SECTIONS = {
   services: { title: 'Servicios', hint: 'Crea, edita y elimina los servicios publicados en el catálogo.' },
   products: { title: 'Productos', hint: 'Crea, edita y elimina los productos publicados en el catálogo.' },
   brands: { title: 'Marcas', hint: 'Fabricantes/marcas de los productos (ej. AKT, Bajaj) — lo más parecido a "proveedores" en un marketplace, donde no se le compra inventario a terceros para revender.' },
+  suppliers: { title: 'Proveedores', hint: 'Agenda de a quién comprarle inventario — se puede vincular cada producto a su proveedor desde el formulario de Productos.' },
   'payment-methods': { title: 'Métodos de pago', hint: 'Actívalos o desactívalos sin tocar código — el checkout refleja el cambio al instante.' },
   coupons: { title: 'Cupones', hint: 'Códigos de descuento — porcentuales o fijos, con compra mínima, vigencia y límite de usos.' },
   settings: { title: 'Configuración', hint: 'Contenido general del sitio, guardado en la base de datos — hoy, términos y condiciones.' },
@@ -74,7 +75,7 @@ function wireSidebar() {
       link.classList.add('is-active');
 
       const tab = link.dataset.tab;
-      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands', 'payment-methods', 'coupons', 'settings'].forEach((name) => {
+      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands', 'suppliers', 'payment-methods', 'coupons', 'settings'].forEach((name) => {
         const section = document.getElementById(`admin-tab-${name}`);
         section.hidden = name !== tab;
         if (name === tab) {
@@ -525,6 +526,7 @@ async function openServiceForm(slug) {
     document.getElementById('service-id').value = service.id;
     document.getElementById('service-slug').value = service.slug;
     document.getElementById('service-name').value = service.name;
+    document.getElementById('service-name-en').value = service.name_en || '';
     document.getElementById('service-category').value = service.category_id || '';
     document.getElementById('service-price').value = service.price;
     document.getElementById('service-duration').value = service.duration_minutes || '';
@@ -532,6 +534,7 @@ async function openServiceForm(slug) {
     document.getElementById('service-latitude').value = service.latitude ?? '';
     document.getElementById('service-longitude').value = service.longitude ?? '';
     document.getElementById('service-description').value = service.description || '';
+    document.getElementById('service-description-en').value = service.description_en || '';
     document.getElementById('service-cancellation').value = service.cancellation_policy || '';
     document.getElementById('service-status').value = service.status;
 
@@ -554,6 +557,7 @@ function closeServiceForm() {
 function serviceFormPayload() {
   return {
     name: document.getElementById('service-name').value.trim(),
+    name_en: document.getElementById('service-name-en').value.trim() || undefined,
     category_id: document.getElementById('service-category').value || undefined,
     price: document.getElementById('service-price').value,
     duration_minutes: document.getElementById('service-duration').value || undefined,
@@ -561,6 +565,7 @@ function serviceFormPayload() {
     latitude: document.getElementById('service-latitude').value || undefined,
     longitude: document.getElementById('service-longitude').value || undefined,
     description: document.getElementById('service-description').value.trim() || undefined,
+    description_en: document.getElementById('service-description-en').value.trim() || undefined,
     cancellation_policy: document.getElementById('service-cancellation').value.trim() || undefined,
     status: document.getElementById('service-status').value,
   };
@@ -657,17 +662,24 @@ function wireServiceManagement() {
 async function populateProductSelects() {
   const categorySelect = document.getElementById('product-category');
   const brandSelect = document.getElementById('product-brand');
+  const supplierSelect = document.getElementById('product-supplier');
 
   try {
-    const [categories, brands] = await Promise.all([catalogService.categories(), catalogService.brands()]);
+    const [categories, brands, suppliers] = await Promise.all([
+      catalogService.categories(),
+      catalogService.brands(),
+      adminService.suppliers(),
+    ]);
     const flatCategories = helpers.flattenCategories(categories);
 
     categorySelect.innerHTML = '<option value="">Selecciona una categoría</option>' +
       flatCategories.map((cat) => `<option value="${cat.id}">${helpers.escapeHtml(cat.name)}</option>`).join('');
     brandSelect.innerHTML = '<option value="">Sin marca</option>' +
       brands.map((brand) => `<option value="${brand.id}">${helpers.escapeHtml(brand.name)}</option>`).join('');
+    supplierSelect.innerHTML = '<option value="">Sin proveedor</option>' +
+      suppliers.map((supplier) => `<option value="${supplier.id}">${helpers.escapeHtml(supplier.name)}</option>`).join('');
   } catch (error) {
-    // El formulario sigue siendo usable sin categorías/marcas precargadas.
+    // El formulario sigue siendo usable sin categorías/marcas/proveedores precargados.
   }
 }
 
@@ -790,14 +802,17 @@ async function openProductForm(slug) {
     document.getElementById('product-id').value = product.id;
     document.getElementById('product-slug').value = product.slug;
     document.getElementById('product-name').value = product.name;
+    document.getElementById('product-name-en').value = product.name_en || '';
     document.getElementById('product-sku').value = product.sku;
     document.getElementById('product-category').value = product.category_id || '';
     document.getElementById('product-brand').value = product.brand_id || '';
+    document.getElementById('product-supplier').value = product.supplier_id || '';
     document.getElementById('product-price').value = product.price;
     document.getElementById('product-previous-price').value = product.previous_price || '';
     document.getElementById('product-stock').value = product.stock;
     document.getElementById('product-min-stock').value = product.min_stock || 0;
     document.getElementById('product-short-description').value = product.short_description || '';
+    document.getElementById('product-short-description-en').value = product.short_description_en || '';
     document.getElementById('product-status').value = product.status;
 
     // El stock ya existe en inventario: se bloquea aquí a propósito (ver comentario arriba).
@@ -825,11 +840,13 @@ function productFormPayload() {
 
   return {
     name: document.getElementById('product-name').value.trim(),
+    name_en: document.getElementById('product-name-en').value.trim() || undefined,
     // Vacío = el backend genera un SKU único automático (sección 10); en
     // edición, vacío conserva el SKU actual (ver UpdateProductUseCase).
     sku: document.getElementById('product-sku').value.trim() || undefined,
     category_id: document.getElementById('product-category').value,
     brand_id: document.getElementById('product-brand').value || undefined,
+    supplier_id: document.getElementById('product-supplier').value || undefined,
     price: document.getElementById('product-price').value,
     previous_price: document.getElementById('product-previous-price').value || undefined,
     // Al editar, el input está deshabilitado (readonly) — su .value sigue siendo
@@ -838,6 +855,7 @@ function productFormPayload() {
     stock: document.getElementById('product-stock').value || (isEditing ? '0' : undefined),
     min_stock: document.getElementById('product-min-stock').value || undefined,
     short_description: document.getElementById('product-short-description').value.trim() || undefined,
+    short_description_en: document.getElementById('product-short-description-en').value.trim() || undefined,
     status: document.getElementById('product-status').value,
   };
 }
@@ -1016,6 +1034,128 @@ function wireBrandManagement() {
       }
       document.getElementById('brand-modal-overlay').classList.remove('is-open');
       loadBrands();
+    } catch (error) {
+      errorBox.textContent = helpers.flattenErrors(error.fields) || error.message;
+    }
+  });
+}
+
+/**
+ * Proveedores (permiso manage-suppliers): a diferencia de marcas, es una
+ * agenda interna (a quién comprarle) — no es público, no aparece en el
+ * catálogo del cliente. Cada producto puede vincularse a uno (ver
+ * populateProductSelects/productFormPayload más arriba).
+ */
+async function loadSuppliers() {
+  const body = document.getElementById('suppliers-table-body');
+  const errorBox = document.getElementById('suppliers-error');
+  errorBox.textContent = '';
+
+  try {
+    const suppliers = await adminService.suppliers({ include_inactive: 1 });
+
+    if (suppliers.length === 0) {
+      body.innerHTML = '<tr><td colspan="5">Todavía no hay proveedores creados.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = suppliers.map((supplier) => `
+      <tr data-supplier-id="${supplier.id}">
+        <td>${helpers.escapeHtml(supplier.name)}</td>
+        <td>${helpers.escapeHtml(supplier.contact_name || '—')}</td>
+        <td>${helpers.escapeHtml(supplier.phone || '—')}</td>
+        <td><span class="status-badge ${supplier.status === 'active' ? 'is-final-good' : ''}">${supplier.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+        <td>
+          <div class="flex gap-8">
+            <button class="btn btn-secondary" data-action="edit-supplier">Editar</button>
+            <button class="btn btn-secondary" data-action="delete-supplier">Eliminar</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('[data-action="edit-supplier"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const supplier = suppliers.find((s) => s.id === Number(button.closest('tr').dataset.supplierId));
+        openSupplierForm(supplier);
+      });
+    });
+
+    body.querySelectorAll('[data-action="delete-supplier"]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const id = button.closest('tr').dataset.supplierId;
+        if (!window.confirm('¿Eliminar este proveedor? Los productos vinculados quedarán sin proveedor asignado.')) return;
+
+        try {
+          await adminService.deleteSupplier(id);
+          helpers.toast('Proveedor eliminado.', 'success');
+          loadSuppliers();
+        } catch (error) {
+          helpers.toast(error.message, 'error');
+        }
+      });
+    });
+  } catch (error) {
+    handleAdminError(error, errorBox);
+  }
+}
+
+function openSupplierForm(supplier) {
+  document.getElementById('supplier-form').reset();
+  document.getElementById('supplier-form-error').textContent = '';
+  document.getElementById('supplier-id').value = supplier ? supplier.id : '';
+  document.getElementById('supplier-name').value = supplier ? supplier.name : '';
+  document.getElementById('supplier-contact-name').value = supplier ? (supplier.contact_name || '') : '';
+  document.getElementById('supplier-phone').value = supplier ? (supplier.phone || '') : '';
+  document.getElementById('supplier-email').value = supplier ? (supplier.email || '') : '';
+  document.getElementById('supplier-tax-id').value = supplier ? (supplier.tax_id || '') : '';
+  document.getElementById('supplier-address').value = supplier ? (supplier.address || '') : '';
+  document.getElementById('supplier-notes').value = supplier ? (supplier.notes || '') : '';
+  document.getElementById('supplier-status').value = supplier ? supplier.status : 'active';
+  document.getElementById('supplier-modal-title').textContent = supplier ? 'Editar proveedor' : 'Nuevo proveedor';
+  document.getElementById('supplier-submit-btn').textContent = supplier ? 'Guardar cambios' : 'Crear proveedor';
+  document.getElementById('supplier-modal-overlay').classList.add('is-open');
+}
+
+function wireSupplierManagement() {
+  document.getElementById('new-supplier-btn').addEventListener('click', () => openSupplierForm(null));
+  document.getElementById('supplier-modal-close').addEventListener('click', () => {
+    document.getElementById('supplier-modal-overlay').classList.remove('is-open');
+  });
+  document.getElementById('supplier-modal-overlay').addEventListener('click', (event) => {
+    if (event.target === document.getElementById('supplier-modal-overlay')) {
+      document.getElementById('supplier-modal-overlay').classList.remove('is-open');
+    }
+  });
+
+  document.getElementById('supplier-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorBox = document.getElementById('supplier-form-error');
+    errorBox.textContent = '';
+
+    const id = document.getElementById('supplier-id').value;
+    const payload = {
+      name: document.getElementById('supplier-name').value.trim(),
+      contact_name: document.getElementById('supplier-contact-name').value.trim() || undefined,
+      phone: document.getElementById('supplier-phone').value.trim() || undefined,
+      email: document.getElementById('supplier-email').value.trim() || undefined,
+      tax_id: document.getElementById('supplier-tax-id').value.trim() || undefined,
+      address: document.getElementById('supplier-address').value.trim() || undefined,
+      notes: document.getElementById('supplier-notes').value.trim() || undefined,
+      status: document.getElementById('supplier-status').value,
+    };
+
+    try {
+      if (id) {
+        await adminService.updateSupplier(id, payload);
+        helpers.toast('Proveedor actualizado.', 'success');
+      } else {
+        await adminService.createSupplier(payload);
+        helpers.toast('Proveedor creado.', 'success');
+      }
+      document.getElementById('supplier-modal-overlay').classList.remove('is-open');
+      loadSuppliers();
+      populateProductSelects();
     } catch (error) {
       errorBox.textContent = helpers.flattenErrors(error.fields) || error.message;
     }
@@ -1306,6 +1446,7 @@ async function initAdminPage() {
   wireServiceManagement();
   wireProductManagement();
   wireBrandManagement();
+  wireSupplierManagement();
   wirePaymentMethodManagement();
   wireCouponManagement();
   document.getElementById('orders-status-filter').addEventListener('change', loadOrders);
@@ -1335,6 +1476,7 @@ async function initAdminPage() {
   populateProductSelects();
   loadProductsAdmin();
   loadBrands();
+  loadSuppliers();
   loadPaymentMethods();
   loadCoupons();
   loadSettingsTerms();

@@ -23,6 +23,7 @@ use App\Infrastructure\Persistence\PdoCategoryRepository;
 use App\Infrastructure\Persistence\PdoFavoriteRepository;
 use App\Infrastructure\Persistence\PdoNotificationRepository;
 use App\Infrastructure\Persistence\PdoProductRepository;
+use App\Infrastructure\Persistence\PdoSupplierRepository;
 use App\Infrastructure\Persistence\PdoUserRepository;
 
 final class ProductController
@@ -30,15 +31,22 @@ final class ProductController
     private PdoProductRepository $products;
     private PdoCategoryRepository $categories;
     private PdoBrandRepository $brands;
+    private PdoSupplierRepository $suppliers;
     private PdoUserRepository $users;
     private PdoFavoriteRepository $favorites;
     private PdoNotificationRepository $notifications;
 
     private const RULES = [
         'name' => 'required|max:200',
+        // Traducción al inglés (selector de idioma, opcional): si se deja vacío,
+        // el sitio en inglés muestra el texto en español como fallback — ver
+        // helpers.localized() en el frontend.
+        'name_en' => 'max:200',
         'category_id' => 'required|integer',
         'brand_id' => 'integer',
+        'supplier_id' => 'integer',
         'short_description' => 'max:500',
+        'short_description_en' => 'max:500',
         // Opcional (sección 10): si se deja vacío al crear, se genera un SKU
         // único automáticamente (ver CreateProductUseCase/SkuGenerator).
         'sku' => 'max:100',
@@ -61,6 +69,7 @@ final class ProductController
         $this->products = new PdoProductRepository($connection);
         $this->categories = new PdoCategoryRepository($connection);
         $this->brands = new PdoBrandRepository($connection);
+        $this->suppliers = new PdoSupplierRepository($connection);
         $this->users = new PdoUserRepository($connection);
         $this->favorites = new PdoFavoriteRepository($connection);
         $this->notifications = new PdoNotificationRepository($connection);
@@ -100,7 +109,7 @@ final class ProductController
     {
         $data = Validator::make($request->input(), self::RULES)->validate();
 
-        $id = (new CreateProductUseCase($this->products, $this->categories, $this->brands))->handle($data);
+        $id = (new CreateProductUseCase($this->products, $this->categories, $this->brands, $this->suppliers))->handle($data);
         $product = $this->products->find($id);
 
         // Notifica a TODOS los usuarios (campanita) solo si el producto ya nace
@@ -122,7 +131,7 @@ final class ProductController
         $data = Validator::make($request->input(), self::RULES)->validate();
 
         $before = $this->products->find((int) $id);
-        (new UpdateProductUseCase($this->products, $this->categories, $this->brands))->handle((int) $id, $data);
+        (new UpdateProductUseCase($this->products, $this->categories, $this->brands, $this->suppliers))->handle((int) $id, $data);
         $after = $this->products->find((int) $id);
 
         // Promoción (campanita): recién ENTRÓ en descuento (antes 0/nulo, ahora > 0).

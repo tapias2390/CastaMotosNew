@@ -38,4 +38,10 @@ const adminService = {
 
   // Configuración general del sitio — hoy solo términos y condiciones (permiso manage-settings).
   updateTerms: (content) => apiService.put('/admin/settings/terms', { content }),
+
+  // Proveedores (agenda interna, no pública — a diferencia de brands/marcas).
+  suppliers: (filters = {}) => apiService.get('/admin/suppliers' + catalogService.toQueryString(filters)),
+  createSupplier: (payload) => apiService.post('/admin/suppliers', payload),
+  updateSupplier: (id, payload) => apiService.put(`/admin/suppliers/${id}`, payload),
+  deleteSupplier: (id) => apiService.del(`/admin/suppliers/${id}`),
 };

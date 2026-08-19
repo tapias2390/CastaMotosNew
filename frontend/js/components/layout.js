@@ -26,66 +26,71 @@ function renderHeaderShell() {
         </a>
         <div class="site-header__search">
           <form id="header-search-form" role="search">
-            <label class="sr-only" for="header-search-input">Buscar productos y servicios</label>
-            <input id="header-search-input" type="search" placeholder="Buscar cascos, repuestos, servicios..." autocomplete="off">
-            <button type="submit" aria-label="Buscar">🔍</button>
+            <label class="sr-only" for="header-search-input">${i18nService.t('search.label')}</label>
+            <input id="header-search-input" type="search" placeholder="${i18nService.t('search.placeholder')}" autocomplete="off">
+            <button type="submit" aria-label="${i18nService.t('search.aria')}">🔍</button>
           </form>
         </div>
         <nav class="site-header__actions">
-          <button class="icon-btn" id="theme-toggle-btn" type="button" aria-label="${themeService.current() === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro'}">
+          <button class="icon-btn" id="lang-toggle-btn" type="button" aria-label="${i18nService.t('lang.toggle.aria')}" style="font-weight:700;">
+            ${i18nService.current() === 'es' ? 'EN' : 'ES'}
+          </button>
+          <button class="icon-btn" id="theme-toggle-btn" type="button" aria-label="${themeService.current() === 'light' ? i18nService.t('theme.toggle.toDark') : i18nService.t('theme.toggle.toLight')}">
             ${themeService.current() === 'light' ? '☀️' : '🌙'}
           </button>
           ${user ? `
           <div class="notif-bell" id="notif-bell">
-            <button class="icon-btn" id="notif-toggle-btn" type="button" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="false">
+            <button class="icon-btn" id="notif-toggle-btn" type="button" aria-label="${i18nService.t('notif.aria')}" aria-haspopup="true" aria-expanded="false">
               🔔<span class="badge-count" id="notif-badge" hidden>0</span>
             </button>
             <div class="notif-panel" id="notif-panel" hidden>
               <div class="notif-panel__header">
-                <span>Notificaciones</span>
-                <button type="button" id="notif-mark-all-btn">Marcar todas como leídas</button>
+                <span>${i18nService.t('notif.title')}</span>
+                <button type="button" id="notif-mark-all-btn">${i18nService.t('notif.markAllRead')}</button>
               </div>
               <div class="notif-panel__list" id="notif-list">
-                <p class="loading-state" style="padding:12px;">Cargando…</p>
+                <p class="loading-state" style="padding:12px;">${i18nService.t('nav.loading')}</p>
               </div>
             </div>
           </div>
           ` : ''}
-          ${user ? '<a class="icon-btn" href="favoritos" aria-label="Mis favoritos">♥</a>' : ''}
-          <a class="icon-btn" href="carrito" aria-label="Carrito">
+          ${user ? `<a class="icon-btn" href="favoritos" aria-label="${i18nService.t('nav.favorites')}">♥</a>` : ''}
+          <a class="icon-btn" href="carrito" aria-label="${i18nService.t('nav.cart')}">
             🛒<span class="badge-count" id="cart-badge" hidden>0</span>
           </a>
-          ${isAdminUser(user) ? '<a class="icon-btn" href="admin">Admin</a>' : ''}
+          ${isAdminUser(user) ? `<a class="icon-btn" href="admin">${i18nService.t('nav.admin')}</a>` : ''}
           ${user
-            ? `<a href="perfil" style="font-size:0.85rem;color:var(--gris-texto);">Hola, <strong style="color:var(--blanco)">${helpers.escapeHtml(user.name)}</strong></a>
-               <button class="icon-btn" id="logout-btn">Salir</button>`
-            : `<button class="icon-btn" id="open-login-btn">Iniciar sesión</button>`}
+            ? `<a href="perfil" style="font-size:0.85rem;color:var(--gris-texto);">${i18nService.t('nav.greeting')} <strong style="color:var(--blanco)">${helpers.escapeHtml(user.name)}</strong></a>
+               <button class="icon-btn" id="logout-btn">${i18nService.t('nav.logout')}</button>`
+            : `<button class="icon-btn" id="open-login-btn">${i18nService.t('nav.login')}</button>`}
         </nav>
       </div>
       <div class="category-nav">
         <div class="container category-nav__bar">
           <div class="category-nav__dropdown">
             <button class="category-nav__toggle" id="category-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
-              ☰ Categorías <span class="category-nav__caret">▾</span>
+              ☰ ${i18nService.t('nav.categories')} <span class="category-nav__caret">▾</span>
             </button>
             <div class="category-nav__menu" id="category-dropdown-menu">
-              <p class="loading-state" style="padding:8px 10px;">Cargando…</p>
+              <p class="loading-state" style="padding:8px 10px;">${i18nService.t('nav.loading')}</p>
             </div>
           </div>
-          <a href="productos">Todos los productos</a>
-          <a href="productos?on_sale=1">Ofertas</a>
-          <a href="servicios">Servicios</a>
+          <a href="productos">${i18nService.t('nav.allProducts')}</a>
+          <a href="productos?on_sale=1">${i18nService.t('nav.deals')}</a>
+          <a href="servicios">${i18nService.t('nav.services')}</a>
         </div>
       </div>
     </header>
     ${authModalMarkup()}
   `;
 
+  document.getElementById('lang-toggle-btn').addEventListener('click', () => i18nService.toggle());
+
   document.getElementById('theme-toggle-btn').addEventListener('click', () => {
     const next = themeService.toggle();
     const button = document.getElementById('theme-toggle-btn');
     button.textContent = next === 'light' ? '☀️' : '🌙';
-    button.setAttribute('aria-label', next === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro');
+    button.setAttribute('aria-label', next === 'light' ? i18nService.t('theme.toggle.toDark') : i18nService.t('theme.toggle.toLight'));
   });
 
   document.getElementById('header-search-form').addEventListener('submit', (event) => {
@@ -145,7 +150,7 @@ async function loadNotificationList() {
     const { notifications } = await notificationService.list();
 
     if (notifications.length === 0) {
-      list.innerHTML = '<p class="empty-state" style="padding:16px;font-size:0.85rem;">No tenés notificaciones todavía.</p>';
+      list.innerHTML = `<p class="empty-state" style="padding:16px;font-size:0.85rem;">${i18nService.t('notif.empty')}</p>`;
       return;
     }
 
@@ -172,7 +177,7 @@ async function loadNotificationList() {
       });
     });
   } catch (error) {
-    list.innerHTML = '<p class="error-state" style="padding:16px;">No fue posible cargar las notificaciones.</p>';
+    list.innerHTML = `<p class="error-state" style="padding:16px;">${i18nService.t('notif.loadError')}</p>`;
   }
 }
 
@@ -302,68 +307,68 @@ function authModalMarkup() {
     <div class="modal-overlay" id="auth-modal-overlay">
       <div class="modal">
         <div class="modal__header">
-          <h2 class="modal__title" id="auth-modal-title">Iniciar sesión</h2>
-          <button class="modal__close" id="auth-modal-close" aria-label="Cerrar">✕</button>
+          <h2 class="modal__title" id="auth-modal-title">${i18nService.t('auth.login.title')}</h2>
+          <button class="modal__close" id="auth-modal-close" aria-label="${i18nService.t('auth.close')}">✕</button>
         </div>
         <div class="modal__tabs">
-          <button class="modal__tab is-active" data-tab="login">Iniciar sesión</button>
-          <button class="modal__tab" data-tab="register">Crear cuenta</button>
+          <button class="modal__tab is-active" data-tab="login">${i18nService.t('auth.login.title')}</button>
+          <button class="modal__tab" data-tab="register">${i18nService.t('auth.register.title')}</button>
         </div>
 
         <form id="login-form">
           <div class="form-group">
-            <label for="login-email">Correo</label>
+            <label for="login-email">${i18nService.t('auth.email')}</label>
             <input class="form-control" type="email" id="login-email" required>
           </div>
           <div class="form-group">
-            <label for="login-password">Contraseña</label>
+            <label for="login-password">${i18nService.t('auth.password')}</label>
             <div class="password-field">
               <input class="form-control" type="password" id="login-password" required>
-              <button type="button" class="password-toggle" data-target="login-password" aria-label="Mostrar contraseña"></button>
+              <button type="button" class="password-toggle" data-target="login-password" aria-label="${i18nService.t('auth.showPassword')}"></button>
             </div>
           </div>
-          <a class="auth-link" href="recuperar-password">¿Olvidaste tu contraseña?</a>
+          <a class="auth-link" href="recuperar-password">${i18nService.t('auth.forgotPassword')}</a>
           <div class="form-error" id="login-error"></div>
-          <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+          <button class="btn btn-primary btn-block" type="submit">${i18nService.t('auth.submitLogin')}</button>
         </form>
 
         <form id="register-form" hidden>
           <div class="form-row">
             <div class="form-group">
-              <label for="register-name">Nombre</label>
+              <label for="register-name">${i18nService.t('auth.name')}</label>
               <input class="form-control" id="register-name" required>
             </div>
             <div class="form-group">
-              <label for="register-last-name">Apellido</label>
+              <label for="register-last-name">${i18nService.t('auth.lastName')}</label>
               <input class="form-control" id="register-last-name" required>
             </div>
           </div>
           <div class="form-group">
-            <label for="register-email">Correo</label>
+            <label for="register-email">${i18nService.t('auth.email')}</label>
             <input class="form-control" type="email" id="register-email" required>
           </div>
           <div class="form-group">
-            <label for="register-password">Contraseña</label>
+            <label for="register-password">${i18nService.t('auth.password')}</label>
             <div class="password-field">
               <input class="form-control" type="password" id="register-password" minlength="8" required>
-              <button type="button" class="password-toggle" data-target="register-password" aria-label="Mostrar contraseña"></button>
+              <button type="button" class="password-toggle" data-target="register-password" aria-label="${i18nService.t('auth.showPassword')}"></button>
             </div>
           </div>
           <div class="form-group">
-            <label for="register-password-confirmation">Confirmar contraseña</label>
+            <label for="register-password-confirmation">${i18nService.t('auth.passwordConfirm')}</label>
             <div class="password-field">
               <input class="form-control" type="password" id="register-password-confirmation" minlength="8" required>
-              <button type="button" class="password-toggle" data-target="register-password-confirmation" aria-label="Mostrar contraseña"></button>
+              <button type="button" class="password-toggle" data-target="register-password-confirmation" aria-label="${i18nService.t('auth.showPassword')}"></button>
             </div>
           </div>
           <div class="form-group">
             <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">
               <input type="checkbox" id="register-terms" required style="width:auto;">
-              Acepto los <a href="terminos" target="_blank" rel="noopener" style="color:var(--amarillo);text-decoration:underline;">términos y condiciones</a>
+              ${i18nService.t('auth.acceptTermsPrefix')} <a href="terminos" target="_blank" rel="noopener" style="color:var(--amarillo);text-decoration:underline;">${i18nService.t('auth.termsLink')}</a>
             </label>
           </div>
           <div class="form-error" id="register-error"></div>
-          <button class="btn btn-primary btn-block" type="submit">Crear cuenta</button>
+          <button class="btn btn-primary btn-block" type="submit">${i18nService.t('auth.submitRegister')}</button>
         </form>
       </div>
     </div>
@@ -384,7 +389,7 @@ function switchAuthTab(tab) {
   document.querySelectorAll('.modal__tab').forEach((btn) => btn.classList.toggle('is-active', btn.dataset.tab === tab));
   document.getElementById('login-form').hidden = tab !== 'login';
   document.getElementById('register-form').hidden = tab !== 'register';
-  document.getElementById('auth-modal-title').textContent = tab === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
+  document.getElementById('auth-modal-title').textContent = tab === 'login' ? i18nService.t('auth.login.title') : i18nService.t('auth.register.title');
 }
 
 function initAuthModalEvents() {
@@ -451,24 +456,24 @@ function renderFooter() {
         <div class="site-footer__grid">
           <div class="site-footer__col">
             <h3>CASTAMOTO</h3>
-            <p style="color:var(--gris-texto);font-size:0.85rem;">Todo para tu moto: repuestos, accesorios y servicios especializados.</p>
+            <p style="color:var(--gris-texto);font-size:0.85rem;">${i18nService.t('footer.tagline')}</p>
           </div>
           <div class="site-footer__col">
-            <h3>Comprar</h3>
-            <a href="productos">Todos los productos</a>
-            <a href="servicios">Servicios</a>
-            <a href="productos?on_sale=1">Ofertas</a>
+            <h3>${i18nService.t('footer.buy')}</h3>
+            <a href="productos">${i18nService.t('nav.allProducts')}</a>
+            <a href="servicios">${i18nService.t('nav.services')}</a>
+            <a href="productos?on_sale=1">${i18nService.t('nav.deals')}</a>
           </div>
           <div class="site-footer__col">
-            <h3>Mi cuenta</h3>
-            <a href="perfil">Mi perfil</a>
-            <a href="pedidos">Mis pedidos</a>
-            <a href="carrito">Carrito</a>
-            <a href="favoritos">Mis favoritos</a>
+            <h3>${i18nService.t('footer.myAccount')}</h3>
+            <a href="perfil">${i18nService.t('footer.myProfile')}</a>
+            <a href="pedidos">${i18nService.t('footer.myOrders')}</a>
+            <a href="carrito">${i18nService.t('nav.cart')}</a>
+            <a href="favoritos">${i18nService.t('footer.myFavorites')}</a>
           </div>
         </div>
         <div class="site-footer__bottom">
-          <a href="terminos">Términos y condiciones</a> · Plataforma en construcción progresiva. © ${new Date().getFullYear()} CASTAMOTO
+          <a href="terminos">${i18nService.t('footer.terms')}</a> · ${i18nService.t('footer.progressNotice')} © ${new Date().getFullYear()} CASTAMOTO
         </div>
       </div>
     </footer>

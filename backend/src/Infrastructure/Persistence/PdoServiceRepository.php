@@ -209,10 +209,10 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
     {
         $stmt = $this->connection->prepare(
             'INSERT INTO services (
-                store_id, category_id, professional_user_id, name, slug, description, price,
+                store_id, category_id, professional_user_id, name, name_en, slug, description, description_en, price,
                 duration_minutes, location, latitude, longitude, schedule, availability, cancellation_policy, status
             ) VALUES (
-                :store_id, :category_id, :professional_user_id, :name, :slug, :description, :price,
+                :store_id, :category_id, :professional_user_id, :name, :name_en, :slug, :description, :description_en, :price,
                 :duration_minutes, :location, :latitude, :longitude, :schedule, :availability, :cancellation_policy, :status
             )'
         );
@@ -226,7 +226,7 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
         $stmt = $this->connection->prepare(
             'UPDATE services SET
                 store_id = :store_id, category_id = :category_id, professional_user_id = :professional_user_id,
-                name = :name, slug = :slug, description = :description, price = :price,
+                name = :name, name_en = :name_en, slug = :slug, description = :description, description_en = :description_en, price = :price,
                 duration_minutes = :duration_minutes, location = :location, latitude = :latitude, longitude = :longitude,
                 schedule = :schedule, availability = :availability, cancellation_policy = :cancellation_policy, status = :status
              WHERE id = :id'
@@ -241,8 +241,10 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
             'category_id' => $data['category_id'] ?? null,
             'professional_user_id' => $data['professional_user_id'] ?? null,
             'name' => $data['name'],
+            'name_en' => $data['name_en'] ?? null,
             'slug' => $data['slug'],
             'description' => $data['description'] ?? null,
+            'description_en' => $data['description_en'] ?? null,
             'price' => $data['price'],
             'duration_minutes' => $data['duration_minutes'] ?? null,
             'location' => $data['location'] ?? null,

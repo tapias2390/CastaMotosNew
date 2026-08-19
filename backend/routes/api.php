@@ -24,6 +24,7 @@ use App\Presentation\Controllers\NotificationController;
 use App\Presentation\Controllers\PaymentMethodController;
 use App\Presentation\Controllers\ProductController;
 use App\Presentation\Controllers\ProfileController;
+use App\Presentation\Controllers\SupplierController;
 use App\Presentation\Controllers\PushSubscriptionController;
 use App\Presentation\Controllers\ReviewController;
 use App\Presentation\Controllers\SearchController;
@@ -86,6 +87,12 @@ $router->get('api/brands', [BrandController::class, 'index'], [new OptionalAuthM
 $router->post('api/brands', [BrandController::class, 'store'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-brands')]);
 $router->put('api/brands/{id}', [BrandController::class, 'update'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-brands')]);
 $router->delete('api/brands/{id}', [BrandController::class, 'destroy'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-brands')]);
+
+// Proveedores (admin, agenda interna) — a diferencia de brands, ni el index es público.
+$router->get('api/admin/suppliers', [SupplierController::class, 'index'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-suppliers')]);
+$router->post('api/admin/suppliers', [SupplierController::class, 'store'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-suppliers')]);
+$router->put('api/admin/suppliers/{id}', [SupplierController::class, 'update'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-suppliers')]);
+$router->delete('api/admin/suppliers/{id}', [SupplierController::class, 'destroy'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-suppliers')]);
 
 // --- Productos (Fase 3 / secciones 10-11) ---
 $router->get('api/products', [ProductController::class, 'index'], [new OptionalAuthMiddleware()]);

@@ -316,11 +316,11 @@ final class PdoProductRepository implements ProductRepositoryInterface
     {
         $stmt = $this->connection->prepare(
             'INSERT INTO products (
-                store_id, category_id, brand_id, name, slug, description, short_description,
+                store_id, category_id, brand_id, supplier_id, name, name_en, slug, description, short_description, short_description_en,
                 sku, internal_code, price, previous_price, discount_percentage, tax_rate,
                 stock, min_stock, weight, dimensions, warranty, additional_info, status
             ) VALUES (
-                :store_id, :category_id, :brand_id, :name, :slug, :description, :short_description,
+                :store_id, :category_id, :brand_id, :supplier_id, :name, :name_en, :slug, :description, :short_description, :short_description_en,
                 :sku, :internal_code, :price, :previous_price, :discount_percentage, :tax_rate,
                 :stock, :min_stock, :weight, :dimensions, :warranty, :additional_info, :status
             )'
@@ -334,8 +334,9 @@ final class PdoProductRepository implements ProductRepositoryInterface
     {
         $stmt = $this->connection->prepare(
             'UPDATE products SET
-                store_id = :store_id, category_id = :category_id, brand_id = :brand_id,
-                name = :name, slug = :slug, description = :description, short_description = :short_description,
+                store_id = :store_id, category_id = :category_id, brand_id = :brand_id, supplier_id = :supplier_id,
+                name = :name, name_en = :name_en, slug = :slug, description = :description,
+                short_description = :short_description, short_description_en = :short_description_en,
                 sku = :sku, internal_code = :internal_code, price = :price, previous_price = :previous_price,
                 discount_percentage = :discount_percentage, tax_rate = :tax_rate, stock = :stock,
                 min_stock = :min_stock, weight = :weight, dimensions = :dimensions, warranty = :warranty,
@@ -351,10 +352,13 @@ final class PdoProductRepository implements ProductRepositoryInterface
             'store_id' => $data['store_id'] ?? null,
             'category_id' => $data['category_id'],
             'brand_id' => $data['brand_id'] ?? null,
+            'supplier_id' => $data['supplier_id'] ?? null,
             'name' => $data['name'],
+            'name_en' => $data['name_en'] ?? null,
             'slug' => $data['slug'],
             'description' => $data['description'] ?? null,
             'short_description' => $data['short_description'] ?? null,
+            'short_description_en' => $data['short_description_en'] ?? null,
             'sku' => $data['sku'],
             'internal_code' => $data['internal_code'] ?? null,
             'price' => $data['price'],
