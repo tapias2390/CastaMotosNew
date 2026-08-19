@@ -168,6 +168,7 @@ textarea {
 }
 .site-header__search input {
   flex: 1;
+  min-width: 0;
   border: none;
   padding: 12px 18px;
   background: transparent;
@@ -235,6 +236,68 @@ textarea {
    atributo [hidden] — sin esto, el "0" del carrito vacío no se ocultaba. */
 .badge-count[hidden] {
   display: none;
+}
+
+/* Header angosto (celular): el logo con imagen de 80px + texto "CASTAMOTO" +
+   el botón "Iniciar sesión" son rígidos (flex-shrink: 0) y entre los tres
+   nunca entraban en ~375px de ancho, empujando TODA la página a scrollear
+   horizontalmente (no era culpa del WhatsApp ni del asistente flotantes —
+   se probó quitándolos del DOM y el overflow seguía igual). Se achica el
+   logo y se vuelve el botón de sesión ícono-solo para que todo entre. */
+@media (max-width: 640px) {
+  /* Con el logo achicado y los botones ícono-solo (abajo) ya entraban en una
+     sola fila en la mayoría de los casos, PERO con varios íconos logueado
+     (favoritos+carrito+Admin+Salir) el buscador quedaba comprimido a una
+     tira casi invisible — sin espacio real para escribir. Se pasa el
+     buscador a su propia fila completa en vez de competir por ancho. */
+  :root {
+    --header-height: 116px;
+  }
+  .site-header__bar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 0;
+    row-gap: 8px;
+  }
+  .site-header__search {
+    order: 3;
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+  .site-header__logo img {
+    height: 40px;
+  }
+  .site-header__logo span {
+    display: none;
+  }
+  .site-header__actions #open-login-btn {
+    padding: 8px;
+    font-size: 0;
+  }
+  .site-header__actions #open-login-btn::before {
+    content: "👤";
+    font-size: 0.95rem;
+  }
+  /* Usuario logueado: el saludo "Hola, Nombre" es decorativo (el perfil
+     sigue accesible desde el footer) — se oculta para dejar lugar a los
+     botones de verdad (Admin/Salir), que pasan a ícono-solo igual que
+     "Iniciar sesión" arriba. */
+  .site-header__actions a[href="perfil"] {
+    display: none;
+  }
+  .site-header__actions #logout-btn,
+  .site-header__actions a.icon-btn[href="admin"] {
+    padding: 8px;
+    font-size: 0;
+  }
+  .site-header__actions #logout-btn::before {
+    content: "🚪";
+    font-size: 0.95rem;
+  }
+  .site-header__actions a.icon-btn[href="admin"]::before {
+    content: "🛠️";
+    font-size: 0.95rem;
+  }
 }
 
 .btn {
