@@ -196,6 +196,10 @@ input, select, textarea { font-family: inherit; }
   justify-content: center;
   padding: 0 4px;
 }
+/* Mismo problema que img[hidden]/.assistant-panel[hidden] (buscar esos
+   comentarios): "display: flex" de autor le gana al "display: none" del
+   atributo [hidden] — sin esto, el "0" del carrito vacío no se ocultaba. */
+.badge-count[hidden] { display: none; }
 
 .btn {
   display: inline-flex;
@@ -966,6 +970,10 @@ input, select, textarea { font-family: inherit; }
   overflow: hidden;
   z-index: 190;
 }
+/* Mismo problema que img[hidden] (ver arriba): "display: flex" de autor le
+   gana al "display: none" de [hidden] del navegador — sin esto, cerrar el
+   panel (panel.hidden = true) no lo ocultaba de verdad. */
+.assistant-panel[hidden] { display: none; }
 .assistant-panel__header {
   background: var(--negro);
   color: var(--amarillo);
