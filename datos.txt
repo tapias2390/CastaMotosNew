@@ -1,5 +1,0 @@
-
-Sitio: http://localhost/proyectos/castamotos/
-Usuario: admin@castamoto.local
-Contraseña: CambiarEsteClave123!
-Swagger: http://localhost/proyectos/castamotos/api-docs/

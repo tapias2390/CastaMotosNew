@@ -7,6 +7,9 @@ backend/.env
 backend/.env.production
 .env
 
+# Notas locales con credenciales reales (admin, SMTP, etc.) — nunca al repo.
+datos.txt
+
 # Logs y almacenamiento
 backend/storage/logs/*.log
 backend/storage/uploads/*
