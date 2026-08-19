@@ -47,6 +47,7 @@ const ADMIN_SECTIONS = {
   brands: { title: 'Marcas', hint: 'Fabricantes/marcas de los productos (ej. AKT, Bajaj) — lo más parecido a "proveedores" en un marketplace, donde no se le compra inventario a terceros para revender.' },
   'payment-methods': { title: 'Métodos de pago', hint: 'Actívalos o desactívalos sin tocar código — el checkout refleja el cambio al instante.' },
   coupons: { title: 'Cupones', hint: 'Códigos de descuento — porcentuales o fijos, con compra mínima, vigencia y límite de usos.' },
+  settings: { title: 'Configuración', hint: 'Contenido general del sitio, guardado en la base de datos — hoy, términos y condiciones.' },
 };
 
 /** Barra lateral (fija en escritorio, cajón deslizable en pantallas angostas). */
@@ -73,7 +74,7 @@ function wireSidebar() {
       link.classList.add('is-active');
 
       const tab = link.dataset.tab;
-      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands', 'payment-methods', 'coupons'].forEach((name) => {
+      ['dashboard', 'orders', 'reservations', 'customers', 'inventory', 'services', 'products', 'brands', 'payment-methods', 'coupons', 'settings'].forEach((name) => {
         const section = document.getElementById(`admin-tab-${name}`);
         section.hidden = name !== tab;
         if (name === tab) {
@@ -1336,6 +1337,38 @@ async function initAdminPage() {
   loadBrands();
   loadPaymentMethods();
   loadCoupons();
+  loadSettingsTerms();
+  wireSettingsForm();
+}
+
+/**
+ * Configuración general (sección "falta un editor de configuración general
+ * del sitio" del README) — arranca con términos y condiciones, el mismo
+ * texto que ya muestra /terminos, editable acá sin tocar código.
+ */
+async function loadSettingsTerms() {
+  const textarea = document.getElementById('settings-terms-content');
+  try {
+    const { content } = await settingsService.terms();
+    textarea.value = content || '';
+  } catch (error) {
+    document.getElementById('settings-terms-error').textContent = 'No fue posible cargar el contenido actual.';
+  }
+}
+
+function wireSettingsForm() {
+  document.getElementById('settings-terms-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorBox = document.getElementById('settings-terms-error');
+    errorBox.textContent = '';
+
+    try {
+      await adminService.updateTerms(document.getElementById('settings-terms-content').value);
+      helpers.toast('Términos y condiciones actualizados.', 'success');
+    } catch (error) {
+      errorBox.textContent = helpers.flattenErrors(error.fields) || error.message;
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initAdminPage);

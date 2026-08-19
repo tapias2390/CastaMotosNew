@@ -16,7 +16,7 @@
   document.write('<base href="' + (isLocal ? '/proyectos/castamotos/' : '/') + '">');
 })();
 </script>
-<link rel="stylesheet" href="frontend/css/main.css">
+<link rel="stylesheet" href="frontend/css/main.css?v=20260819">
 <script src="frontend/js/theme-init.js"></script>
 </head>
 <body>
@@ -43,6 +43,7 @@
       <button class="admin-nav-link" data-tab="brands"><span>🏷️</span> Marcas</button>
       <button class="admin-nav-link" data-tab="payment-methods"><span>💳</span> Métodos de pago</button>
       <button class="admin-nav-link" data-tab="coupons"><span>🏷️</span> Cupones</button>
+      <button class="admin-nav-link" data-tab="settings"><span>⚙️</span> Configuración</button>
     </nav>
   </aside>
 
@@ -247,6 +248,20 @@
       </table>
     </div>
     <div id="coupons-error" class="form-error mt-16"></div>
+  </section>
+
+  <section id="admin-tab-settings" hidden>
+    <p style="color:var(--gris-texto);font-size:0.85rem;margin-top:0;">
+      Este texto es el que ven los clientes en /terminos y al aceptar en el registro. Podés editarlo cuando quieras — se guarda en la base de datos, no hace falta subir código.
+    </p>
+    <form id="settings-terms-form">
+      <div class="form-group">
+        <label for="settings-terms-content">Términos y condiciones</label>
+        <textarea class="form-control" id="settings-terms-content" rows="18" style="font-family:monospace;font-size:0.82rem;">Cargando…</textarea>
+      </div>
+      <div class="form-error" id="settings-terms-error"></div>
+      <button class="btn btn-primary" type="submit">Guardar cambios</button>
+    </form>
   </section>
   </main>
 </div>

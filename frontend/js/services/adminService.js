@@ -35,4 +35,7 @@ const adminService = {
   createCoupon: (payload) => apiService.post('/admin/coupons', payload),
   updateCoupon: (id, payload) => apiService.put(`/admin/coupons/${id}`, payload),
   deleteCoupon: (id) => apiService.del(`/admin/coupons/${id}`),
+
+  // Configuración general del sitio — hoy solo términos y condiciones (permiso manage-settings).
+  updateTerms: (content) => apiService.put('/admin/settings/terms', { content }),
 };

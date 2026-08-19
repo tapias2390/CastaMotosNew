@@ -34,4 +34,17 @@ final class SettingsController
             'content' => $settings->get('terms_and_conditions') ?? '',
         ]);
     }
+
+    /** Edición desde /admin (permiso manage-settings) — el mismo texto que ya muestra /terminos. */
+    public function updateTerms(Request $request): void
+    {
+        $data = \App\Application\Validation\Validator::make($request->input(), [
+            'content' => 'required',
+        ])->validate();
+
+        $settings = new PdoSiteSettingsRepository(Connection::get());
+        $settings->set('terms_and_conditions', $data['content']);
+
+        Response::success(null, 'Términos y condiciones actualizados.');
+    }
 }

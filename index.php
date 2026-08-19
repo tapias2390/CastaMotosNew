@@ -17,7 +17,7 @@
   document.write('<base href="' + (isLocal ? '/proyectos/castamotos/' : '/') + '">');
 })();
 </script>
-<link rel="stylesheet" href="frontend/css/main.css">
+<link rel="stylesheet" href="frontend/css/main.css?v=20260819">
 <script src="frontend/js/theme-init.js"></script>
 </head>
 <body>
@@ -37,22 +37,30 @@
 </section>
 
 <main class="container">
-  <div class="promo-banner">
-    <div class="promo-banner__text">
-      <h2>Todo para tu moto, con envío a todo el país</h2>
-      <p>Repuestos, accesorios y servicios especializados en un solo lugar.</p>
-    </div>
-    <a class="btn btn-primary" href="productos">Explorar productos</a>
-  </div>
+  <div class="home-banners">
+    <a class="wash-cta" href="lavado">
+      <span class="wash-cta__anim" aria-hidden="true">
+        <span class="wash-cta__moto">🏍️</span>
+        <span class="wash-cta__bubble wash-cta__bubble--1"></span>
+        <span class="wash-cta__bubble wash-cta__bubble--2"></span>
+        <span class="wash-cta__bubble wash-cta__bubble--3"></span>
+        <span class="wash-cta__bubble wash-cta__bubble--4"></span>
+      </span>
+      <span class="wash-cta__text">
+        <strong>Lavado de Motos y Cascos</strong>
+        <span>Reservá el día y la hora que prefieras.</span>
+      </span>
+      <span class="wash-cta__btn">Reservar <span class="wash-cta__arrow">→</span></span>
+    </a>
 
-  <a class="wash-cta" href="lavado">
-    <span class="wash-cta__icon">🧼</span>
-    <span class="wash-cta__text">
-      <strong>Lavado de Motos y Cascos</strong>
-      <span>Reservá el día y la hora que prefieras.</span>
-    </span>
-    <span class="wash-cta__btn">Reservar <span class="wash-cta__arrow">→</span></span>
-  </a>
+    <div class="promo-banner">
+      <div class="promo-banner__text">
+        <h2>Todo para tu moto, con envío a todo el país</h2>
+        <p>Repuestos, accesorios y servicios especializados en un solo lugar.</p>
+      </div>
+      <a class="btn btn-primary" href="productos">Explorar productos</a>
+    </div>
+  </div>
 
   <section class="section">
     <h2 class="section__title">Categorías</h2>

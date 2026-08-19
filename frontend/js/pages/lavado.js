@@ -18,7 +18,27 @@ let washState = {
   name: '',
   phone: '',
   itemNote: '', // modelo de moto / marca del casco — texto libre, opcional
+  primaryAddress: null, // se carga una vez al inicio (ver loadPrimaryAddress) — respaldo de teléfono si el perfil no lo tiene
 };
+
+/**
+ * El teléfono puede estar cargado en el PERFIL (Mi perfil) o en una
+ * DIRECCIÓN guardada (cada una tiene el suyo, sección 9) — son datos
+ * distintos que antes el wizard solo miraba por separado. Se trae la
+ * dirección principal una sola vez al abrir el wizard para poder usarla
+ * como respaldo del teléfono (y a futuro, de la dirección de entrega) sin
+ * obligar a cargar todo de nuevo si ya existe en algún lado.
+ */
+async function loadPrimaryAddress() {
+  if (!authService.isAuthenticated()) return;
+  try {
+    const addresses = await cartService.addresses();
+    washState.primaryAddress = addresses.find((a) => a.is_primary) || addresses[0] || null;
+  } catch (error) {
+    // Sin direcciones todavía, o falló la carga: el wizard sigue con los
+    // datos del perfil nomás, no es bloqueante.
+  }
+}
 
 function setStep(step) {
   washState.step = step;
@@ -119,7 +139,7 @@ async function renderStep() {
       <p class="mt-16" style="color:var(--gris-texto);">Tus datos:</p>
       <div class="form-row mt-16">
         <div class="form-group"><label for="wash-name">Nombre</label><input class="form-control" id="wash-name" value="${helpers.escapeHtml(washState.name || (user ? user.name + ' ' + user.last_name : ''))}"></div>
-        <div class="form-group"><label for="wash-phone">Teléfono</label><input class="form-control" id="wash-phone" value="${helpers.escapeHtml(washState.phone || user?.phone || '')}"></div>
+        <div class="form-group"><label for="wash-phone">Teléfono</label><input class="form-control" id="wash-phone" value="${helpers.escapeHtml(washState.phone || user?.phone || washState.primaryAddress?.phone || '')}"></div>
       </div>
       <div class="form-group">
         <label for="wash-note">${noteLabel}</label>
@@ -141,6 +161,15 @@ async function renderStep() {
       washState.name = name;
       washState.phone = phone;
       washState.itemNote = document.getElementById('wash-note').value.trim();
+
+      // Si el perfil todavía no tenía teléfono, se completa con este —
+      // así la próxima vez (acá o en cualquier otro lado del sitio) ya
+      // está guardado, sin pedirlo de nuevo. Nunca pisa un teléfono que
+      // ya existía ahí (podría ser distinto a propósito).
+      if (user && !user.phone) {
+        authService.updateProfile({ name: user.name, last_name: user.last_name, phone }).catch(() => {});
+      }
+
       setStep(4);
     });
     return;
@@ -251,4 +280,7 @@ async function confirmReservation() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => setStep(1));
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadPrimaryAddress();
+  setStep(1);
+});

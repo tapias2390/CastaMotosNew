@@ -42,6 +42,7 @@ use App\Presentation\Middleware\RequirePermissionMiddleware;
 $router->get('api/health', [HealthController::class, 'index']);
 $router->get('api/settings/public', [SettingsController::class, 'publicSettings']);
 $router->get('api/settings/terms', [SettingsController::class, 'terms']);
+$router->put('api/admin/settings/terms', [SettingsController::class, 'updateTerms'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-settings')]);
 
 // --- Asistente de preguntas (Fase 11) — funciona para invitados ---
 $router->post('api/assistant/ask', [AssistantController::class, 'ask'], [new OptionalAuthMiddleware()]);

@@ -21,4 +21,13 @@ final class PdoSiteSettingsRepository
 
         return $value !== false ? (string) $value : null;
     }
+
+    public function set(string $key, string $value): void
+    {
+        $stmt = $this->connection->prepare(
+            'INSERT INTO site_settings (setting_key, value) VALUES (:key, :value)
+             ON DUPLICATE KEY UPDATE value = VALUES(value)'
+        );
+        $stmt->execute(['key' => $key, 'value' => $value]);
+    }
 }
