@@ -18,6 +18,7 @@ use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Persistence\PdoCategoryRepository;
 use App\Infrastructure\Persistence\PdoFavoriteRepository;
+use App\Infrastructure\Persistence\PdoNotificationRepository;
 use App\Infrastructure\Persistence\PdoServiceRepository;
 use App\Infrastructure\Persistence\PdoUserRepository;
 
@@ -27,6 +28,7 @@ final class ServiceController
     private PdoCategoryRepository $categories;
     private PdoUserRepository $users;
     private PdoFavoriteRepository $favorites;
+    private PdoNotificationRepository $notifications;
 
     private const RULES = [
         'name' => 'required|max:200',
@@ -46,6 +48,7 @@ final class ServiceController
         $this->categories = new PdoCategoryRepository($connection);
         $this->users = new PdoUserRepository($connection);
         $this->favorites = new PdoFavoriteRepository($connection);
+        $this->notifications = new PdoNotificationRepository($connection);
     }
 
     public function index(Request $request): void
@@ -86,8 +89,18 @@ final class ServiceController
         $data = Validator::make($request->input(), self::RULES)->validate();
 
         $id = (new CreateServiceUseCase($this->services, $this->categories))->handle($data);
+        $service = $this->services->find($id);
 
-        Response::success($this->services->find($id), 'Servicio creado correctamente.', 201);
+        if (($service['status'] ?? null) === 'active') {
+            $this->notifications->notifyAllUsers(
+                'new_service',
+                'Nuevo servicio',
+                $service['name'] . ' ya está disponible en CASTAMOTO.',
+                ['service_id' => $id, 'slug' => $service['slug']]
+            );
+        }
+
+        Response::success($service, 'Servicio creado correctamente.', 201);
     }
 
     public function update(Request $request, string $id): void

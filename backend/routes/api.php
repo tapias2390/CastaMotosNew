@@ -20,6 +20,7 @@ use App\Presentation\Controllers\DashboardController;
 use App\Presentation\Controllers\FavoriteController;
 use App\Presentation\Controllers\HealthController;
 use App\Presentation\Controllers\MediaController;
+use App\Presentation\Controllers\NotificationController;
 use App\Presentation\Controllers\PaymentMethodController;
 use App\Presentation\Controllers\ProductController;
 use App\Presentation\Controllers\ProfileController;
@@ -117,6 +118,11 @@ $router->get('api/favorites', [FavoriteController::class, 'index'], [new AuthMid
 $router->post('api/favorites', [FavoriteController::class, 'store'], [new AuthMiddleware()]);
 $router->get('api/favorites/check', [FavoriteController::class, 'check'], [new AuthMiddleware()]);
 $router->delete('api/favorites/{type}/{id}', [FavoriteController::class, 'destroy'], [new AuthMiddleware()]);
+
+// Campanita de notificaciones (header, todo el sitio) — cada usuario ve solo las suyas.
+$router->get('api/notifications', [NotificationController::class, 'index'], [new AuthMiddleware()]);
+$router->put('api/notifications/read-all', [NotificationController::class, 'markAllRead'], [new AuthMiddleware()]);
+$router->put('api/notifications/{id}/read', [NotificationController::class, 'markRead'], [new AuthMiddleware()]);
 
 // --- Reseñas (sección 26): lectura pública, publicar requiere sesión + haber comprado ---
 $router->get('api/reviews', [ReviewController::class, 'index']);

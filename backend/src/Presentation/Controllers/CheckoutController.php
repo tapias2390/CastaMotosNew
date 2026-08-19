@@ -14,6 +14,7 @@ use App\Infrastructure\Http\Response;
 use App\Infrastructure\Persistence\PdoAddressRepository;
 use App\Infrastructure\Persistence\PdoCartRepository;
 use App\Infrastructure\Persistence\PdoCouponRepository;
+use App\Infrastructure\Persistence\PdoNotificationRepository;
 use App\Infrastructure\Persistence\PdoOrderRepository;
 use App\Infrastructure\Persistence\PdoPaymentMethodRepository;
 use App\Infrastructure\Persistence\PdoPushSubscriptionRepository;
@@ -26,6 +27,7 @@ final class CheckoutController
     private PdoPaymentMethodRepository $paymentMethods;
     private PdoPushSubscriptionRepository $pushSubscriptions;
     private PdoCouponRepository $coupons;
+    private PdoNotificationRepository $notifications;
 
     public function __construct()
     {
@@ -36,6 +38,7 @@ final class CheckoutController
         $this->paymentMethods = new PdoPaymentMethodRepository($connection);
         $this->pushSubscriptions = new PdoPushSubscriptionRepository($connection);
         $this->coupons = new PdoCouponRepository($connection);
+        $this->notifications = new PdoNotificationRepository($connection);
     }
 
     public function store(Request $request): void
@@ -52,7 +55,7 @@ final class CheckoutController
 
         $cart = $this->carts->resolveActiveCart($user->id, null);
 
-        $useCase = new CheckoutUseCase($this->carts, $this->orders, $this->addresses, $this->paymentMethods, $this->pushSubscriptions, $this->coupons);
+        $useCase = new CheckoutUseCase($this->carts, $this->orders, $this->addresses, $this->paymentMethods, $this->pushSubscriptions, $this->coupons, $this->notifications);
         $result = $useCase->handle(
             $user->id,
             (int) $cart['id'],

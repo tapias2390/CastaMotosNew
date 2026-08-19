@@ -12,6 +12,7 @@ use App\Application\Support\OrderNumberGenerator;
 use App\Domain\Repositories\AddressRepositoryInterface;
 use App\Domain\Repositories\CartRepositoryInterface;
 use App\Domain\Repositories\CouponRepositoryInterface;
+use App\Domain\Repositories\NotificationRepositoryInterface;
 use App\Domain\Repositories\OrderRepositoryInterface;
 use App\Domain\Repositories\PaymentMethodRepositoryInterface;
 use App\Domain\Repositories\PushSubscriptionRepositoryInterface;
@@ -35,7 +36,8 @@ final class CheckoutUseCase
         private AddressRepositoryInterface $addresses,
         private PaymentMethodRepositoryInterface $paymentMethods,
         private ?PushSubscriptionRepositoryInterface $pushSubscriptions = null,
-        private ?CouponRepositoryInterface $coupons = null
+        private ?CouponRepositoryInterface $coupons = null,
+        private ?NotificationRepositoryInterface $notifications = null
     ) {
     }
 
@@ -160,6 +162,22 @@ final class CheckoutUseCase
                 PushNotificationFactory::make()->send($tokens, 'Pedido recibido', "Tu pedido {$orderNumber} fue creado.", ['order_number' => $orderNumber]);
             } catch (\Throwable $e) {
                 Logger::error('Fallo al enviar push de pedido creado', ['order_number' => $orderNumber, 'error' => $e->getMessage()]);
+            }
+        }
+
+        // Campanita del admin: aviso de pedido nuevo (a diferencia del push de
+        // arriba, que es para el cliente sobre SU pedido, este es para quien
+        // tiene que atenderlo — administrador/superadministrador).
+        if ($this->notifications !== null) {
+            try {
+                $this->notifications->notifyAdmins(
+                    'new_order',
+                    'Nuevo pedido',
+                    "Se generó el pedido {$orderNumber} por " . number_format($orderPayload['total'], 0, ',', '.') . ' COP.',
+                    ['order_number' => $orderNumber]
+                );
+            } catch (\Throwable $e) {
+                Logger::error('Fallo al notificar pedido nuevo al admin', ['order_number' => $orderNumber, 'error' => $e->getMessage()]);
             }
         }
 

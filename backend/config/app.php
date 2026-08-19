@@ -88,6 +88,15 @@ return [
         'password' => $_ENV['ADMIN_PASSWORD'] ?? null,
     ],
 
+    'backup' => [
+        // Destino del botón "Enviar backup" del admin (sección nueva). Por
+        // defecto el mismo correo desde el que ya se envía todo (MAIL_FROM_ADDRESS)
+        // — así el admin se lo manda a sí mismo sin tener que tipear otra
+        // dirección a mano (fuente de errores ya vista con el typo de Gmail).
+        // BACKUP_EMAIL en .env permite mandarlo a otro lado si hace falta.
+        'email' => $_ENV['BACKUP_EMAIL'] ?? ($_ENV['MAIL_FROM_ADDRESS'] ?? ''),
+    ],
+
     'contact' => [
         // Número de WhatsApp del negocio, formato internacional sin "+" ni espacios
         // (ej. 573001234567), tal como lo exige la API de wa.me. Se expone solo vía

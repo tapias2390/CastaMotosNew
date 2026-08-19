@@ -21,6 +21,7 @@ use App\Infrastructure\Http\Response;
 use App\Infrastructure\Persistence\PdoBrandRepository;
 use App\Infrastructure\Persistence\PdoCategoryRepository;
 use App\Infrastructure\Persistence\PdoFavoriteRepository;
+use App\Infrastructure\Persistence\PdoNotificationRepository;
 use App\Infrastructure\Persistence\PdoProductRepository;
 use App\Infrastructure\Persistence\PdoUserRepository;
 
@@ -31,6 +32,7 @@ final class ProductController
     private PdoBrandRepository $brands;
     private PdoUserRepository $users;
     private PdoFavoriteRepository $favorites;
+    private PdoNotificationRepository $notifications;
 
     private const RULES = [
         'name' => 'required|max:200',
@@ -61,6 +63,7 @@ final class ProductController
         $this->brands = new PdoBrandRepository($connection);
         $this->users = new PdoUserRepository($connection);
         $this->favorites = new PdoFavoriteRepository($connection);
+        $this->notifications = new PdoNotificationRepository($connection);
     }
 
     public function index(Request $request): void
@@ -98,17 +101,44 @@ final class ProductController
         $data = Validator::make($request->input(), self::RULES)->validate();
 
         $id = (new CreateProductUseCase($this->products, $this->categories, $this->brands))->handle($data);
+        $product = $this->products->find($id);
 
-        Response::success($this->products->find($id), 'Producto creado correctamente.', 201);
+        // Notifica a TODOS los usuarios (campanita) solo si el producto ya nace
+        // publicado — uno cargado en "draft" no debería avisarle a nadie todavía.
+        if (($product['status'] ?? null) === 'active') {
+            $this->notifications->notifyAllUsers(
+                'new_product',
+                'Nuevo producto',
+                $product['name'] . ' ya está disponible en CASTAMOTO.',
+                ['product_id' => $id, 'slug' => $product['slug']]
+            );
+        }
+
+        Response::success($product, 'Producto creado correctamente.', 201);
     }
 
     public function update(Request $request, string $id): void
     {
         $data = Validator::make($request->input(), self::RULES)->validate();
 
+        $before = $this->products->find((int) $id);
         (new UpdateProductUseCase($this->products, $this->categories, $this->brands))->handle((int) $id, $data);
+        $after = $this->products->find((int) $id);
 
-        Response::success($this->products->find((int) $id), 'Producto actualizado correctamente.');
+        // Promoción (campanita): recién ENTRÓ en descuento (antes 0/nulo, ahora > 0).
+        // No se repite en cada edición del producto una vez que ya está en oferta.
+        $hadDiscount = (float) ($before['discount_percentage'] ?? 0) > 0;
+        $hasDiscount = (float) ($after['discount_percentage'] ?? 0) > 0;
+        if (!$hadDiscount && $hasDiscount && $after['status'] === 'active') {
+            $this->notifications->notifyAllUsers(
+                'promotion',
+                '¡Nueva oferta!',
+                $after['name'] . ' ahora tiene ' . (int) $after['discount_percentage'] . '% de descuento.',
+                ['product_id' => (int) $id, 'slug' => $after['slug']]
+            );
+        }
+
+        Response::success($after, 'Producto actualizado correctamente.');
     }
 
     public function destroy(Request $request, string $id): void

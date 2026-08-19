@@ -35,6 +35,22 @@ function renderHeaderShell() {
           <button class="icon-btn" id="theme-toggle-btn" type="button" aria-label="${themeService.current() === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro'}">
             ${themeService.current() === 'light' ? '☀️' : '🌙'}
           </button>
+          ${user ? `
+          <div class="notif-bell" id="notif-bell">
+            <button class="icon-btn" id="notif-toggle-btn" type="button" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="false">
+              🔔<span class="badge-count" id="notif-badge" hidden>0</span>
+            </button>
+            <div class="notif-panel" id="notif-panel" hidden>
+              <div class="notif-panel__header">
+                <span>Notificaciones</span>
+                <button type="button" id="notif-mark-all-btn">Marcar todas como leídas</button>
+              </div>
+              <div class="notif-panel__list" id="notif-list">
+                <p class="loading-state" style="padding:12px;">Cargando…</p>
+              </div>
+            </div>
+          </div>
+          ` : ''}
           ${user ? '<a class="icon-btn" href="favoritos" aria-label="Mis favoritos">♥</a>' : ''}
           <a class="icon-btn" href="carrito" aria-label="Carrito">
             🛒<span class="badge-count" id="cart-badge" hidden>0</span>
@@ -92,6 +108,123 @@ function renderHeaderShell() {
   initCategoryDropdown();
   refreshCartBadge();
   helpers.initPasswordToggles(mount);
+
+  if (user) {
+    initNotificationBell();
+    refreshNotifBadge();
+  }
+}
+
+/** Tipo de notificación → a dónde lleva al hacer click (ver data en cada tabla notifications). */
+function notificationHref(notification) {
+  const data = notification.data || {};
+  if (data.slug && notification.type === 'new_service') return `servicio/${data.slug}`;
+  if (data.slug) return `producto/${data.slug}`;
+  if (data.order_number) return `admin`;
+  return null;
+}
+
+async function refreshNotifBadge() {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+
+  try {
+    const { unread_count: unreadCount } = await notificationService.list();
+    badge.textContent = String(unreadCount);
+    badge.hidden = unreadCount === 0;
+  } catch (error) {
+    badge.hidden = true;
+  }
+}
+
+async function loadNotificationList() {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+
+  try {
+    const { notifications } = await notificationService.list();
+
+    if (notifications.length === 0) {
+      list.innerHTML = '<p class="empty-state" style="padding:16px;font-size:0.85rem;">No tenés notificaciones todavía.</p>';
+      return;
+    }
+
+    list.innerHTML = notifications.map((notification) => `
+      <button type="button" class="notif-item ${notification.is_read ? '' : 'notif-item--unread'}" data-id="${notification.id}">
+        <span class="notif-item__title">${helpers.escapeHtml(notification.title)}</span>
+        <span class="notif-item__message">${helpers.escapeHtml(notification.message)}</span>
+        <span class="notif-item__date">${helpers.formatDateTime(notification.created_at)}</span>
+      </button>
+    `).join('');
+
+    list.querySelectorAll('.notif-item').forEach((item) => {
+      item.addEventListener('click', async () => {
+        const id = item.dataset.id;
+        const notification = notifications.find((n) => String(n.id) === id);
+        try {
+          await notificationService.markRead(id);
+        } catch (error) {
+          // Best-effort: si falla el "marcar como leída" igual navega/cierra.
+        }
+        refreshNotifBadge();
+        const href = notification ? notificationHref(notification) : null;
+        if (href) window.location.href = href;
+      });
+    });
+  } catch (error) {
+    list.innerHTML = '<p class="error-state" style="padding:16px;">No fue posible cargar las notificaciones.</p>';
+  }
+}
+
+function initNotificationBell() {
+  const toggle = document.getElementById('notif-toggle-btn');
+  const panel = document.getElementById('notif-panel');
+  if (!toggle || !panel) return;
+
+  toggle.addEventListener('click', () => {
+    const willOpen = panel.hidden;
+    panel.hidden = !willOpen;
+    toggle.setAttribute('aria-expanded', String(willOpen));
+    if (willOpen) loadNotificationList();
+  });
+
+  document.getElementById('notif-mark-all-btn').addEventListener('click', async (event) => {
+    event.stopPropagation();
+    try {
+      await notificationService.markAllRead();
+      await loadNotificationList();
+      await refreshNotifBadge();
+    } catch (error) {
+      helpers.toast('No fue posible marcar las notificaciones como leídas.', 'error');
+    }
+  });
+
+  // Mismo criterio que el dropdown de categorías (ver initCategoryDropdown):
+  // un solo listener global, busca los elementos vigentes por id en cada click,
+  // porque renderHeaderShell() se puede volver a llamar (login/logout).
+  if (!window.__notifOutsideClickBound) {
+    window.__notifOutsideClickBound = true;
+    document.addEventListener('click', (event) => {
+      const currentBell = document.getElementById('notif-bell');
+      const currentPanel = document.getElementById('notif-panel');
+      if (!currentBell || !currentPanel || currentPanel.hidden) return;
+
+      if (!currentBell.contains(event.target)) {
+        currentPanel.hidden = true;
+        document.getElementById('notif-toggle-btn')?.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // Refresco periódico del contador (no hay push real todavía — ver
+  // PushNotificationFactory — así que se sondea cada 60s mientras la
+  // pestaña está abierta).
+  if (!window.__notifPollingStarted) {
+    window.__notifPollingStarted = true;
+    setInterval(() => {
+      if (document.getElementById('notif-badge')) refreshNotifBadge();
+    }, 60000);
+  }
 }
 
 async function loadCategoryNav() {

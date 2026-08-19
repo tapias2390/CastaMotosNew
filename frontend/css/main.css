@@ -201,6 +201,88 @@ textarea {
   flex-shrink: 0;
 }
 
+.notif-bell {
+  position: relative;
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(340px, calc(100vw - 24px));
+  max-height: 420px;
+  background: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 190;
+}
+/* Mismo problema que .assistant-panel[hidden] (ver más abajo, mismo motivo):
+   sin esto "display: flex" de autor le gana al "display: none" de [hidden]. */
+.notif-panel[hidden] {
+  display: none;
+}
+.notif-panel__header {
+  background: var(--negro);
+  color: var(--amarillo);
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.notif-panel__header button {
+  background: none;
+  border: none;
+  color: var(--gris-texto);
+  font-size: 0.72rem;
+  text-decoration: underline;
+  padding: 0;
+}
+.notif-panel__header button:hover {
+  color: var(--amarillo);
+}
+.notif-panel__list {
+  overflow-y: auto;
+}
+.notif-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--gris-borde);
+  padding: 10px 14px;
+  color: var(--blanco);
+}
+.notif-item:hover {
+  background: var(--negro-suave);
+}
+.notif-item--unread {
+  background: rgba(255, 193, 7, 0.06);
+  border-left: 3px solid var(--amarillo);
+}
+.notif-item__title {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.notif-item__message {
+  font-size: 0.8rem;
+  color: var(--gris-texto);
+}
+.notif-item__date {
+  font-size: 0.7rem;
+  color: var(--gris-texto-tenue);
+  margin-top: 2px;
+}
+
 .icon-btn {
   position: relative;
   background: transparent;

@@ -135,6 +135,63 @@ final class SmtpMailer
         return $full;
     }
 
+    /**
+     * Igual que send(), pero agrega UN adjunto binario (multipart/mixed) —
+     * usado hoy solo por el backup de base de datos (BackupController). Se
+     * separa de send() en vez de agregarle un parámetro opcional para no
+     * tocar la firma que ya usan todos los correos transaccionales existentes.
+     *
+     * @throws \RuntimeException mismos casos que send().
+     */
+    public function sendWithAttachment(
+        string $fromAddress,
+        string $fromName,
+        string $to,
+        string $subject,
+        string $html,
+        string $attachmentFilename,
+        string $attachmentContent,
+        string $attachmentMimeType
+    ): void {
+        $this->connect();
+
+        try {
+            $this->ehlo();
+
+            if ($this->port !== 465) {
+                $this->command("STARTTLS\r\n", 220);
+                $this->enableCrypto();
+                $this->ehlo();
+            }
+
+            if ($this->username !== '') {
+                $this->command("AUTH LOGIN\r\n", 334);
+                $this->command(base64_encode($this->username) . "\r\n", 334);
+                $this->command(base64_encode($this->password) . "\r\n", 235);
+            }
+
+            $this->command('MAIL FROM:<' . $fromAddress . ">\r\n", 250);
+            $this->command('RCPT TO:<' . $to . ">\r\n", [250, 251]);
+            $this->command("DATA\r\n", 354);
+            $message = $this->buildMessageWithAttachment(
+                $fromAddress,
+                $fromName,
+                $to,
+                $subject,
+                $html,
+                $attachmentFilename,
+                $attachmentContent,
+                $attachmentMimeType
+            );
+            $this->command($message . "\r\n.\r\n", 250);
+            $this->command("QUIT\r\n", 221);
+        } finally {
+            if (is_resource($this->socket)) {
+                fclose($this->socket);
+            }
+        }
+    }
+
     private function buildMessage(string $fromAddress, string $fromName, string $to, string $subject, string $html): string
     {
         // RFC 2047: el asunto puede traer tildes/ñ (español) — se codifica en
@@ -157,5 +214,48 @@ final class SmtpMailer
         $body = preg_replace('/^\./m', '..', $html);
 
         return implode("\r\n", $headers) . "\r\n\r\n" . $body;
+    }
+
+    private function buildMessageWithAttachment(
+        string $fromAddress,
+        string $fromName,
+        string $to,
+        string $subject,
+        string $html,
+        string $attachmentFilename,
+        string $attachmentContent,
+        string $attachmentMimeType
+    ): string {
+        $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+        $encodedFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
+        $boundary = 'castamoto-' . bin2hex(random_bytes(12));
+
+        $headers = [
+            'Date: ' . date('r'),
+            "From: {$encodedFromName} <{$fromAddress}>",
+            "To: <{$to}>",
+            "Subject: {$encodedSubject}",
+            'MIME-Version: 1.0',
+            "Content-Type: multipart/mixed; boundary=\"{$boundary}\"",
+        ];
+
+        $htmlBody = preg_replace('/^\./m', '..', $html);
+
+        $parts = [];
+        $parts[] = "--{$boundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{$htmlBody}";
+
+        // base64 en líneas de 76 caracteres (RFC 2045) — algunos clientes de
+        // correo rechazan o corrompen adjuntos con líneas más largas.
+        $encodedAttachment = chunk_split(base64_encode($attachmentContent), 76, "\r\n");
+        $encodedFilename = '=?UTF-8?B?' . base64_encode($attachmentFilename) . '?=';
+        $parts[] = "--{$boundary}\r\n"
+            . "Content-Type: {$attachmentMimeType}; name=\"{$encodedFilename}\"\r\n"
+            . "Content-Transfer-Encoding: base64\r\n"
+            . "Content-Disposition: attachment; filename=\"{$encodedFilename}\"\r\n\r\n"
+            . $encodedAttachment;
+
+        $parts[] = "--{$boundary}--";
+
+        return implode("\r\n", $headers) . "\r\n\r\n" . implode("\r\n\r\n", $parts);
     }
 }

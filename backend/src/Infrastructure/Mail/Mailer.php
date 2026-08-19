@@ -54,6 +54,76 @@ final class Mailer
         return $status === 'sent';
     }
 
+    /**
+     * Igual que send(), con UN adjunto binario — hoy solo lo usa el backup de
+     * base de datos (BackupController). Mismo criterio de driver intercambiable
+     * que send(): en local (sin MAIL_HOST) el adjunto se guarda en disco en vez
+     * de mandarse de verdad, para poder probar sin gastar cuota de Gmail.
+     */
+    public static function sendWithAttachment(
+        string $to,
+        string $subject,
+        string $html,
+        string $template,
+        string $attachmentFilename,
+        string $attachmentContent,
+        string $attachmentMimeType,
+        ?int $userId = null
+    ): bool {
+        $host = (string) Config::get('app.mail.host');
+        $status = 'sent';
+        $errorMessage = null;
+
+        try {
+            if ($host === '') {
+                self::writeToLogDriver($to, $subject, $html);
+                self::writeAttachmentToLogDriver($attachmentFilename, $attachmentContent);
+            } elseif ((string) Config::get('app.mail.username') !== '') {
+                $fromAddress = (string) Config::get('app.mail.from_address');
+                $fromName = (string) Config::get('app.mail.from_name');
+
+                $smtp = new SmtpMailer(
+                    (string) Config::get('app.mail.host'),
+                    (int) Config::get('app.mail.port', 587),
+                    (string) Config::get('app.mail.username'),
+                    (string) Config::get('app.mail.password')
+                );
+
+                $smtp->sendWithAttachment(
+                    $fromAddress,
+                    $fromName,
+                    $to,
+                    $subject,
+                    $html,
+                    $attachmentFilename,
+                    $attachmentContent,
+                    $attachmentMimeType
+                );
+            } else {
+                throw new \RuntimeException('No hay credenciales SMTP configuradas para enviar adjuntos (mail() nativo no las soporta acá).');
+            }
+        } catch (\Throwable $e) {
+            $status = 'failed';
+            $errorMessage = $e->getMessage();
+            Logger::error('Fallo al enviar correo con adjunto', ['to' => $to, 'template' => $template, 'error' => $errorMessage]);
+        }
+
+        self::logAttempt($userId, $to, $subject, $template, $status, $errorMessage);
+
+        return $status === 'sent';
+    }
+
+    private static function writeAttachmentToLogDriver(string $filename, string $content): void
+    {
+        $dir = (self::$basePath ?? dirname(__DIR__, 3)) . '/storage/mails';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+
+        $safeName = sprintf('%s_%s_%s', date('Y-m-d_His'), bin2hex(random_bytes(4)), preg_replace('/[^a-z0-9._-]+/i', '-', $filename));
+        file_put_contents($dir . '/' . $safeName, $content);
+    }
+
     private static function writeToLogDriver(string $to, string $subject, string $html): void
     {
         $dir = (self::$basePath ?? dirname(__DIR__, 3)) . '/storage/mails';
