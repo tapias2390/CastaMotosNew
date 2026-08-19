@@ -29,4 +29,15 @@ interface ServiceRepositoryInterface
     public function deleteImage(int $imageId): void;
 
     public function imageBelongsToService(int $imageId, int $serviceId): bool;
+
+    /**
+     * Horarios ya reservados de este servicio en un día puntual (sección 12) —
+     * público, para que el selector de fecha/hora del frontend pueda mostrar
+     * qué horas ya no están disponibles ANTES de que el usuario intente
+     * reservar (createFromCheckout() ya rechaza el choque, esto solo evita
+     * mostrarle una opción que de todas formas va a fallar).
+     *
+     * @return string[] Horas en formato "H:i" (ej. "10:00"), un pedido CANCELADO no cuenta.
+     */
+    public function bookedTimesForDate(int $serviceId, string $date): array;
 }

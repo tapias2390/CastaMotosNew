@@ -73,6 +73,14 @@ final class ServiceController
         Response::success($service);
     }
 
+    /** Horas ya ocupadas de este servicio en una fecha (sección 12) — público, sin datos sensibles. */
+    public function bookedTimes(Request $request, string $id): void
+    {
+        $data = Validator::make($request->query(), ['date' => 'required'])->validate();
+
+        Response::success($this->services->bookedTimesForDate((int) $id, $data['date']));
+    }
+
     public function store(Request $request): void
     {
         $data = Validator::make($request->input(), self::RULES)->validate();

@@ -315,4 +315,20 @@ final class PdoServiceRepository implements ServiceRepositoryInterface
 
         return (bool) $stmt->fetchColumn();
     }
+
+    public function bookedTimesForDate(int $serviceId, string $date): array
+    {
+        $stmt = $this->connection->prepare(
+            "SELECT oi.scheduled_at FROM order_items oi
+                INNER JOIN orders o ON o.id = oi.order_id
+             WHERE oi.service_id = :service_id AND DATE(oi.scheduled_at) = :date
+                AND o.status != 'CANCELADO'"
+        );
+        $stmt->execute(['service_id' => $serviceId, 'date' => $date]);
+
+        return array_map(
+            static fn (string $scheduledAt) => date('H:i', strtotime($scheduledAt)),
+            $stmt->fetchAll(PDO::FETCH_COLUMN)
+        );
+    }
 }

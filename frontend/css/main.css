@@ -1427,3 +1427,127 @@ input, select, textarea { font-family: inherit; }
 }
 .status-badge.is-final-good { background: rgba(47, 179, 68, 0.15); color: var(--exito); }
 .status-badge.is-final-bad { background: rgba(229, 72, 77, 0.15); color: var(--error); }
+
+/* --- CTA "Lavado de Motos y Cascos" (home) --- */
+/* Compacta a propósito (una sola línea de alto en desktop) — antes ocupaba
+   demasiado espacio con el subtítulo largo. El brillo que cruza (::after)
+   más el pulso del botón "Reservar" son lo que llama la atención, no el
+   tamaño del bloque. */
+.wash-cta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--amarillo), var(--amarillo-oscuro));
+  color: var(--negro);
+  border-radius: var(--radio);
+  padding: 10px 16px;
+  margin-top: 16px;
+  box-shadow: var(--sombra-card);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.wash-cta:hover { transform: translateY(-2px); box-shadow: var(--sombra-card-hover); }
+.wash-cta__icon { font-size: 1.6rem; flex-shrink: 0; }
+.wash-cta__text { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.wash-cta__text strong { font-size: 0.92rem; }
+.wash-cta__text span { font-size: 0.78rem; opacity: 0.8; }
+.wash-cta__btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--negro);
+  color: var(--amarillo);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  animation: wash-cta-btn-pulse 2s ease-in-out infinite;
+}
+.wash-cta__arrow { font-weight: 800; }
+
+/* Brillo diagonal que cruza el banner cada tanto — el "algo se mueve, andá
+   a mirar" que pide un CTA, sin depender de agrandar el bloque. */
+.wash-cta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: wash-cta-shine 3.2s ease-in-out infinite;
+}
+@keyframes wash-cta-shine {
+  0% { left: -60%; }
+  35%, 100% { left: 130%; }
+}
+@keyframes wash-cta-btn-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wash-cta::after { display: none; }
+  .wash-cta__btn { animation: none; }
+}
+@media (max-width: 480px) {
+  .wash-cta__text { flex-direction: column; gap: 0; }
+}
+
+/* --- Wizard de reserva de lavado --- */
+.wash-wizard { max-width: 560px; margin: 24px auto; }
+.wash-wizard__steps { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.wash-wizard__step {
+  flex: 1;
+  min-width: 110px;
+  text-align: center;
+  padding: 8px 6px;
+  border-radius: var(--radio-sm);
+  background: var(--negro-suave);
+  border: 1px solid var(--gris-borde);
+  color: var(--gris-texto);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.wash-wizard__step.is-active { border-color: var(--amarillo); color: var(--amarillo); }
+.wash-wizard__step.is-done { color: var(--exito); border-color: var(--exito); }
+.wash-wizard__nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; }
+.wash-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 12px; }
+.wash-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--gris-oscuro);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-lg);
+  padding: 24px 16px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.wash-option:hover { border-color: var(--amarillo); transform: translateY(-3px); }
+.wash-option__icon { font-size: 2.4rem; }
+.wash-option__name { font-weight: 700; color: var(--blanco); }
+.wash-option__price { color: var(--amarillo); font-weight: 800; font-size: 1.1rem; }
+
+/* Grilla de horarios (disponible/ocupado) del wizard de lavado */
+.wash-time-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; margin-top: 6px; }
+.wash-time-slot {
+  padding: 10px 4px;
+  border-radius: var(--radio-sm);
+  border: 1px solid var(--gris-borde);
+  background: var(--negro-suave);
+  color: var(--blanco);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.wash-time-slot:hover:not(.is-disabled) { border-color: var(--amarillo); color: var(--amarillo); }
+.wash-time-slot.is-selected { background: var(--amarillo); border-color: var(--amarillo); color: var(--negro); }
+.wash-time-slot.is-disabled {
+  background: none;
+  border-style: dashed;
+  color: var(--gris-texto-tenue);
+  text-decoration: line-through;
+  cursor: not-allowed;
+  opacity: 0.6;
+}

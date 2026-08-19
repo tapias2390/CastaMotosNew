@@ -45,6 +45,15 @@
     <a class="btn btn-primary" href="productos">Explorar productos</a>
   </div>
 
+  <a class="wash-cta" href="lavado">
+    <span class="wash-cta__icon">🧼</span>
+    <span class="wash-cta__text">
+      <strong>Lavado de Motos y Cascos</strong>
+      <span>Reservá el día y la hora que prefieras.</span>
+    </span>
+    <span class="wash-cta__btn">Reservar <span class="wash-cta__arrow">→</span></span>
+  </a>
+
   <section class="section">
     <h2 class="section__title">Categorías</h2>
     <div id="home-categories"><p class="loading-state">Cargando categorías…</p></div>

@@ -30,9 +30,12 @@ async function loadCheckoutSummary() {
   mount.innerHTML = `
     <div class="summary-box">
       ${cart.items.map((item) => `
-        <div class="summary-row">
+        <div class="summary-row" data-item-id="${item.id}">
           <span>${item.quantity}× ${helpers.escapeHtml(item.name)}${item.scheduled_at ? ` <br><small style="color:var(--gris-texto);">📅 ${helpers.formatDateTime(item.scheduled_at)}</small>` : ''}</span>
-          <span>${helpers.formatCurrency(item.unit_price * item.quantity)}</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            ${helpers.formatCurrency(item.unit_price * item.quantity)}
+            <button type="button" class="icon-btn" data-action="remove-summary-item" data-item-id="${item.id}" aria-label="Quitar" style="padding:2px 6px;font-size:0.75rem;">🗑</button>
+          </span>
         </div>
       `).join('')}
       ${cart.coupon_code ? `<div class="summary-row" style="color:var(--exito);"><span>🏷️ Cupón ${helpers.escapeHtml(cart.coupon_code)}</span><span></span></div>` : ''}
@@ -43,6 +46,18 @@ async function loadCheckoutSummary() {
       <div class="summary-row total"><span>Total</span><span id="summary-total">${helpers.formatCurrency(cart.total)}</span></div>
     </div>
   `;
+
+  mount.querySelectorAll('[data-action="remove-summary-item"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await cartService.removeItem(btn.dataset.itemId);
+        helpers.toast('Producto eliminado del pedido.', 'success');
+        window.location.reload(); // recalcula todo (direcciones/pago no cambian, solo el resumen)
+      } catch (error) {
+        helpers.toast(error.message, 'error');
+      }
+    });
+  });
 
   return cart;
 }
@@ -244,6 +259,14 @@ async function initCheckoutPage() {
   wireNewAddressForm();
   wireDeliveryMethod(cart);
   wireConfirmOrder();
+
+  // Viene del wizard de reserva de lavado (lavado.js): precarga el teléfono/
+  // modelo como nota, para no duplicar esos campos acá — el usuario igual
+  // puede editarla o borrarla antes de confirmar.
+  const prefilledNote = helpers.queryParam('note');
+  if (prefilledNote) {
+    document.getElementById('order-notes').value = prefilledNote;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', initCheckoutPage);

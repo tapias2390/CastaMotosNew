@@ -100,6 +100,7 @@ $router->put('api/products/{id}/attributes', [ProductController::class, 'syncAtt
 // --- Servicios (Fase 3 / sección 12) ---
 $router->get('api/services', [ServiceController::class, 'index'], [new OptionalAuthMiddleware()]);
 $router->get('api/services/{slug}', [ServiceController::class, 'show'], [new OptionalAuthMiddleware()]);
+$router->get('api/services/{id}/booked-times', [ServiceController::class, 'bookedTimes']);
 $router->post('api/services', [ServiceController::class, 'store'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-services')]);
 $router->put('api/services/{id}', [ServiceController::class, 'update'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-services')]);
 $router->delete('api/services/{id}', [ServiceController::class, 'destroy'], [new AuthMiddleware(), new RequirePermissionMiddleware('manage-services')]);

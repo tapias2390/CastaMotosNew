@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lavado de Motos y Cascos — CASTAMOTO</title>
+<script>
+(function () {
+  var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  document.write('<base href="' + (isLocal ? '/proyectos/castamotos/' : '/') + '">');
+})();
+</script>
+<link rel="stylesheet" href="frontend/css/main.css">
+<script src="frontend/js/theme-init.js"></script>
+</head>
+<body>
+
+<div id="app-header"></div>
+
+<section class="hero">
+  <div class="container">
+    <h1>🧼 Lavado de Motos y Cascos</h1>
+    <p>Reservá el día y la hora que más te sirva — nosotros nos encargamos del resto.</p>
+  </div>
+</section>
+
+<main class="container">
+  <div class="wash-wizard" id="wash-wizard">
+    <div class="wash-wizard__steps" id="wash-wizard-steps">
+      <span class="wash-wizard__step is-active" data-step="1">1. Qué lavar</span>
+      <span class="wash-wizard__step" data-step="2">2. Fecha y hora</span>
+      <span class="wash-wizard__step" data-step="3">3. Tus datos</span>
+      <span class="wash-wizard__step" data-step="4">4. Confirmar</span>
+    </div>
+
+    <div id="wash-wizard-body"><p class="loading-state">Cargando…</p></div>
+  </div>
+</main>
+
+<div id="app-footer"></div>
+
+<script src="frontend/js/utils/helpers.js"></script>
+<script src="frontend/js/services/apiService.js"></script>
+<script src="frontend/js/services/authService.js"></script>
+<script src="frontend/js/services/catalogService.js"></script>
+<script src="frontend/js/services/cartService.js"></script>
+<script src="frontend/js/services/themeService.js"></script>
+<script src="frontend/js/services/settingsService.js"></script>
+<script src="frontend/js/components/layout.js"></script>
+<script src="frontend/js/pages/lavado.js"></script>
+</body>
+</html>

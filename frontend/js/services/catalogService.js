@@ -33,6 +33,7 @@ const catalogService = {
 
   services: (filters = {}) => apiService.get('/services' + toQueryString(filters)),
   service: (slug) => apiService.get(`/services/${encodeURIComponent(slug)}`),
+  serviceBookedTimes: (serviceId, date) => apiService.get(`/services/${serviceId}/booked-times` + toQueryString({ date })),
 
   // Gestión de servicios (panel admin/vendedor) — requiere permiso manage-services,
   // aplicado en el backend (RequirePermissionMiddleware); aquí solo se arma la petición.
